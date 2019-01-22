@@ -24,7 +24,6 @@ func newCmdController() *cobra.Command {
 		DisableAutoGenTag: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			conf := config.GetConfigOrDie()
-
 			mgr, err := manager.New(conf, manager.Options{})
 			if err != nil {
 				term.Fatalln(err)
