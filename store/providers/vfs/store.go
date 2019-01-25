@@ -20,7 +20,7 @@ import (
 	"github.com/graymeta/stow/local"
 	"github.com/graymeta/stow/s3"
 	"github.com/graymeta/stow/swift"
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pharmer/pharmer/credential"
 	"github.com/pharmer/pharmer/store"
 	"github.com/pkg/errors"
@@ -247,6 +247,14 @@ func (s *FileStore) Clusters() store.ClusterStore {
 
 func (s *FileStore) NodeGroups(cluster string) store.NodeGroupStore {
 	return &nodeGroupFileStore{container: s.container, prefix: s.prefix, cluster: cluster, owner: s.owner}
+}
+
+func (s *FileStore) MachineSet(cluster string) store.MachineSetStore {
+	return &machineSetFileStore{container: s.container, prefix: s.prefix, cluster: cluster}
+}
+
+func (s *FileStore) Machine(cluster string) store.MachineStore {
+	return &machineFileStore{container: s.container, prefix: s.prefix, cluster: cluster}
 }
 
 func (s *FileStore) Certificates(cluster string) store.CertificateStore {

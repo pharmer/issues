@@ -1,5 +1,5 @@
-hash: b77ca34ea028cfc20daff73c5fdcf48ecbfadc57e164463a5658cdfdeb42e710
-updated: 2019-03-05T16:01:52.7523476+06:00
+hash: bf52fd94836866881da87f34df238ebd63fd9ddc5f62376a1251d2102ad84b70
+updated: 2019-03-05T16:11:57.672473051+06:00
 imports:
 - name: cloud.google.com/go
   version: 74b12019e2aa53ec27882158f59192d7cd6d1998
@@ -119,6 +119,10 @@ imports:
   - autorest/validation
   - logger
   - version
+- name: github.com/beorn7/perks
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
+  subpackages:
+  - quantile
 - name: github.com/cenkalti/backoff
   version: 61153c768f31ee5f130071d08fc82b85208528de
 - name: github.com/chai2010/gettext-go
@@ -166,6 +170,10 @@ imports:
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
   version: 300e940a926eb277d3901b20bdfcc54928ad3642
+- name: github.com/go-logr/logr
+  version: 9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e
+- name: github.com/go-logr/zapr
+  version: 7536572e8d55209135cd5e7ccf7fce43dca217ab
 - name: github.com/go-openapi/jsonpointer
   version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
 - name: github.com/go-openapi/jsonreference
@@ -189,6 +197,10 @@ imports:
   - sortkeys
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
+- name: github.com/golang/groupcache
+  version: 02826c3e79038b59d737d3b1c0a1d937f71a4433
+  subpackages:
+  - lru
 - name: github.com/golang/protobuf
   version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
@@ -250,6 +262,10 @@ imports:
   version: 222f010658cca4619115dfe10279480c6621001e
   repo: https://github.com/appscode/grpc-gateway.git
   vcs: git
+- name: github.com/hashicorp/golang-lru
+  version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
+  subpackages:
+  - simplelru
 - name: github.com/howeyc/gopass
   version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
 - name: github.com/imdario/mergo
@@ -282,10 +298,16 @@ imports:
   version: bb23615498cded5e105af4ce27de75b089cbe851
 - name: github.com/marstr/guid
   version: 8bdf7d1a087ccc975cf37dd6507da50698fd19ca
+- name: github.com/mattbaird/jsonpatch
+  version: 81af80346b1a01caae0cbc27fd3c1ba5b11e189f
 - name: github.com/mattn/go-colorable
   version: ed8eb9e318d7a84ce5915b495b7d35e0cfe7b5a8
 - name: github.com/mattn/go-isatty
   version: 66b8e73f3f5cda9f96b69efd03dd3d7fc4a5cdb8
+- name: github.com/matttproud/golang_protobuf_extensions
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  subpackages:
+  - pbutil
 - name: github.com/mgutz/ansi
   version: 9520e82c474b0a04dd04f8a40959027271bab992
 - name: github.com/mgutz/str
@@ -348,6 +370,26 @@ imports:
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/prometheus/client_golang
+  version: 505eaef017263e299324067d40ca2c48f6a2cf50
+  subpackages:
+  - prometheus
+  - prometheus/internal
+  - prometheus/promhttp
+- name: github.com/prometheus/client_model
+  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
+  subpackages:
+  - go
+- name: github.com/prometheus/common
+  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
+  subpackages:
+  - expfmt
+  - internal/bitbucket.org/ww/goautoneg
+  - model
+- name: github.com/prometheus/procfs
+  version: 65c1f6f8f0fc1e2185eb9863a3bc751496404259
+  subpackages:
+  - xfs
 - name: github.com/PuerkitoBio/purell
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
@@ -396,6 +438,18 @@ imports:
   vcs: git
 - name: github.com/tent/http-link-go
   version: ac974c61c2f990f4115b119354b5e0b47550e888
+- name: go.uber.org/atomic
+  version: 8dc6146f7569370a472715e178d8ae31172ee6da
+- name: go.uber.org/multierr
+  version: ddea229ff1dff9e6fe8a6c0344ac73b09e81fce5
+- name: go.uber.org/zap
+  version: 67bc79d13d155c02fd008f721863ff8cc5f30659
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
 - name: golang.org/x/crypto
   version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:
@@ -556,6 +610,7 @@ imports:
   - pkg/apis/meta/v1
   - pkg/apis/meta/v1/unstructured
   - pkg/apis/meta/v1/unstructured/unstructuredscheme
+  - pkg/apis/meta/v1/validation
   - pkg/apis/meta/v1beta1
   - pkg/conversion
   - pkg/conversion/queryparams
@@ -571,7 +626,9 @@ imports:
   - pkg/runtime/serializer/versioning
   - pkg/selection
   - pkg/types
+  - pkg/util/cache
   - pkg/util/clock
+  - pkg/util/diff
   - pkg/util/errors
   - pkg/util/framer
   - pkg/util/httpstream
@@ -773,15 +830,21 @@ imports:
   - scale/scheme/extensionsv1beta1
   - third_party/forked/golang/template
   - tools/auth
+  - tools/cache
   - tools/clientcmd
   - tools/clientcmd/api
   - tools/clientcmd/api/latest
   - tools/clientcmd/api/v1
+  - tools/leaderelection
+  - tools/leaderelection/resourcelock
   - tools/metrics
+  - tools/pager
+  - tools/record
   - tools/reference
   - tools/remotecommand
   - transport
   - transport/spdy
+  - util/buffer
   - util/cert
   - util/connrotation
   - util/exec
@@ -789,6 +852,8 @@ imports:
   - util/homedir
   - util/integer
   - util/jsonpath
+  - util/retry
+  - util/workqueue
 - name: k8s.io/cluster-bootstrap
   version: 2d1c733eadd09769030d7de1273e20a53aab14d7
   subpackages:
@@ -838,6 +903,60 @@ imports:
   - exec
   - exec/testing
   - pointer
+- name: sigs.k8s.io/cluster-api
+  version: 813b1fec840d79b37fe86778237b6db6d1cb959d
+  subpackages:
+  - cmd/clusterctl/clientcmd
+  - cmd/clusterctl/clusterdeployer/bootstrap
+  - cmd/clusterctl/clusterdeployer/bootstrap/existing
+  - cmd/clusterctl/clusterdeployer/bootstrap/kind
+  - cmd/clusterctl/clusterdeployer/bootstrap/minikube
+  - cmd/clusterctl/clusterdeployer/clusterclient
+  - cmd/clusterctl/clusterdeployer/provider
+  - cmd/clusterctl/phases
+  - pkg/apis
+  - pkg/apis/cluster/common
+  - pkg/apis/cluster/v1alpha1
+  - pkg/client/clientset_generated/clientset
+  - pkg/client/clientset_generated/clientset/scheme
+  - pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1
+  - pkg/cmdrunner
+  - pkg/controller/cluster
+  - pkg/controller/error
+  - pkg/controller/machine
+  - pkg/kubeadm
+  - pkg/util
+- name: sigs.k8s.io/controller-runtime
+  version: f6f0bc9611363b43664d08fb097ab13243ef621d
+  subpackages:
+  - pkg/cache
+  - pkg/cache/internal
+  - pkg/client
+  - pkg/client/apiutil
+  - pkg/client/config
+  - pkg/controller
+  - pkg/event
+  - pkg/handler
+  - pkg/internal/controller
+  - pkg/internal/controller/metrics
+  - pkg/internal/recorder
+  - pkg/leaderelection
+  - pkg/manager
+  - pkg/metrics
+  - pkg/patch
+  - pkg/predicate
+  - pkg/reconcile
+  - pkg/recorder
+  - pkg/runtime/inject
+  - pkg/runtime/log
+  - pkg/runtime/scheme
+  - pkg/runtime/signals
+  - pkg/source
+  - pkg/source/internal
+  - pkg/webhook/admission
+  - pkg/webhook/admission/types
+  - pkg/webhook/internal/metrics
+  - pkg/webhook/types
 - name: sigs.k8s.io/yaml
   version: fd68e9863619f6ec2fdd8625fe1f02e7c877e480
 testImports:

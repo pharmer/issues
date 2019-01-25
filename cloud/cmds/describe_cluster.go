@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/appscode/go/term"
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pharmer/pharmer/cloud"
 	"github.com/pharmer/pharmer/cloud/cmds/options"
 	"github.com/pharmer/pharmer/config"
@@ -67,6 +67,8 @@ func RunDescribeCluster(ctx context.Context, opts *options.ClusterDescribeConfig
 
 		if resp, err := cloud.CheckForUpdates(ctx, cluster.Name, opts.Owner); err == nil {
 			term.Println(resp)
+		} else {
+			term.ExitOnError(err)
 		}
 	}
 

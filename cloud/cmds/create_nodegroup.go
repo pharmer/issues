@@ -45,10 +45,10 @@ func NewCmdCreateNodeGroup() *cobra.Command {
 }
 
 func CreateNodeGroups(ctx context.Context, opts *options.NodeGroupCreateConfig) {
-	cluster, err := cloud.Get(ctx, opts.ClusterName, opts.Owner)
+	/*cluster, err := cloud.Get(ctx, opts.ClusterName, opts.Owner)
 	term.ExitOnError(err)
 	for sku, count := range opts.Nodes {
 		err := cloud.CreateNodeGroup(ctx, cluster, opts.Owner, api.RoleNode, sku, api.NodeType(opts.NodeType), count, opts.SpotPriceMax)
 		term.ExitOnError(err)
-	}
+	}*/
 }
