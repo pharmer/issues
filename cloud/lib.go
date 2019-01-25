@@ -17,15 +17,15 @@ import (
 
 var managedProviders = sets.NewString("aks", "gke", "eks")
 
-func List(ctx context.Context, opts metav1.ListOptions) ([]*api.Cluster, error) {
-	return Store(ctx).Clusters().List(opts)
+func List(ctx context.Context, opts metav1.ListOptions, owner string) ([]*api.Cluster, error) {
+	return Store(ctx).Owner(owner).Clusters().List(opts)
 }
 
-func Get(ctx context.Context, name string) (*api.Cluster, error) {
-	return Store(ctx).Clusters().Get(name)
+func Get(ctx context.Context, name string, owner string) (*api.Cluster, error) {
+	return Store(ctx).Owner(owner).Clusters().Get(name)
 }
 
-func Create(ctx context.Context, cluster *api.Cluster) (*api.Cluster, error) {
+func Create(ctx context.Context, cluster *api.Cluster, owner string) (*api.Cluster, error) {
 	if cluster == nil {
 		return nil, errors.New("missing cluster")
 	} else if cluster.Name == "" {
@@ -34,7 +34,7 @@ func Create(ctx context.Context, cluster *api.Cluster) (*api.Cluster, error) {
 		return nil, errors.New("missing cluster version")
 	}
 
-	_, err := Store(ctx).Clusters().Get(cluster.Name)
+	_, err := Store(ctx).Owner(owner).Clusters().Get(cluster.Name)
 	if err == nil {
 		return nil, errors.Errorf("cluster exists with name `%s`", cluster.Name)
 	}
@@ -46,28 +46,28 @@ func Create(ctx context.Context, cluster *api.Cluster) (*api.Cluster, error) {
 	if err = cm.SetDefaults(cluster); err != nil {
 		return nil, err
 	}
-	if cluster, err = Store(ctx).Clusters().Create(cluster); err != nil {
+	if cluster, err = Store(ctx).Owner(owner).Clusters().Create(cluster); err != nil {
 		return nil, err
 	}
 
-	if ctx, err = CreateCACertificates(ctx, cluster); err != nil {
+	if ctx, err = CreateCACertificates(ctx, cluster, owner); err != nil {
 		return nil, err
 	}
-	if ctx, err = CreateSSHKey(ctx, cluster); err != nil {
+	if ctx, err = CreateSSHKey(ctx, cluster, owner); err != nil {
 		return nil, err
 	}
 	if !managedProviders.Has(cluster.Spec.Cloud.CloudProvider) {
-		if err = CreateNodeGroup(ctx, cluster, api.RoleMaster, "", api.NodeTypeRegular, 1, float64(0)); err != nil {
+		if err = CreateNodeGroup(ctx, cluster, owner, api.RoleMaster, "", api.NodeTypeRegular, 1, float64(0)); err != nil {
 			return nil, err
 		}
 	}
-	if _, err = Store(ctx).Clusters().Update(cluster); err != nil {
+	if _, err = Store(ctx).Owner(owner).Clusters().Update(cluster); err != nil {
 		return nil, err
 	}
 	return cluster, nil
 }
 
-func CreateNodeGroup(ctx context.Context, cluster *api.Cluster, role, sku string, nodeType api.NodeType, count int, spotPriceMax float64) error {
+func CreateNodeGroup(ctx context.Context, cluster *api.Cluster, owner, role, sku string, nodeType api.NodeType, count int, spotPriceMax float64) error {
 	cm, err := GetCloudManager(cluster.Spec.Cloud.CloudProvider, ctx)
 	if err != nil {
 		return err
@@ -106,27 +106,27 @@ func CreateNodeGroup(ctx context.Context, cluster *api.Cluster, role, sku string
 		ig.Spec.Template.Spec.SpotPriceMax = spotPriceMax
 	}
 
-	_, err = Store(ctx).NodeGroups(cluster.Name).Create(&ig)
+	_, err = Store(ctx).Owner(owner).NodeGroups(cluster.Name).Create(&ig)
 
 	return err
 }
 
-func Delete(ctx context.Context, name string) (*api.Cluster, error) {
+func Delete(ctx context.Context, name string, owner string) (*api.Cluster, error) {
 	if name == "" {
 		return nil, errors.New("missing cluster name")
 	}
 
-	cluster, err := Store(ctx).Clusters().Get(name)
+	cluster, err := Store(ctx).Owner(owner).Clusters().Get(name)
 	if err != nil {
 		return nil, errors.Errorf("cluster `%s` does not exist. Reason: %v", name, err)
 	}
 	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	cluster.Status.Phase = api.ClusterDeleting
 
-	return Store(ctx).Clusters().Update(cluster)
+	return Store(ctx).Owner(owner).Clusters().Update(cluster)
 }
 
-func DeleteNG(ctx context.Context, clusterName, nodeGroupName string) error {
+func DeleteNG(ctx context.Context, clusterName, nodeGroupName string, owner string) error {
 	if clusterName == "" {
 		return errors.New("missing cluster name")
 	}
@@ -134,27 +134,27 @@ func DeleteNG(ctx context.Context, clusterName, nodeGroupName string) error {
 		return errors.New("missing nodegroup name")
 	}
 
-	if _, err := Store(ctx).Clusters().Get(clusterName); err != nil {
+	if _, err := Store(ctx).Owner(owner).Clusters().Get(clusterName); err != nil {
 		return errors.Errorf("cluster `%s` does not exist. Reason: %v", clusterName, err)
 	}
 
-	nodeGroup, err := Store(ctx).NodeGroups(clusterName).Get(nodeGroupName)
+	nodeGroup, err := Store(ctx).Owner(owner).NodeGroups(clusterName).Get(nodeGroupName)
 	if err != nil {
 		return errors.Errorf(`nodegroup not found`)
 	}
 
 	if !nodeGroup.IsMaster() {
 		nodeGroup.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-		_, err := Store(ctx).NodeGroups(clusterName).Update(nodeGroup)
+		_, err := Store(ctx).Owner(owner).NodeGroups(clusterName).Update(nodeGroup)
 		return err
 	}
 
 	return nil
 }
 
-func GetSSHConfig(ctx context.Context, nodeName string, cluster *api.Cluster) (*api.SSHConfig, error) {
+func GetSSHConfig(ctx context.Context, owner, nodeName string, cluster *api.Cluster) (*api.SSHConfig, error) {
 	var err error
-	ctx, err = LoadCACertificates(ctx, cluster)
+	ctx, err = LoadCACertificates(ctx, cluster, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func GetSSHConfig(ctx context.Context, nodeName string, cluster *api.Cluster) (*
 	if err != nil {
 		return nil, err
 	}
-	ctx, err = LoadSSHKey(ctx, cluster)
+	ctx, err = LoadSSHKey(ctx, cluster, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func GetSSHConfig(ctx context.Context, nodeName string, cluster *api.Cluster) (*
 	return cm.GetSSHConfig(cluster, node)
 }
 
-func GetAdminConfig(ctx context.Context, cluster *api.Cluster) (*api.KubeConfig, error) {
+func GetAdminConfig(ctx context.Context, cluster *api.Cluster, owner string) (*api.KubeConfig, error) {
 	if managedProviders.Has(cluster.Spec.Cloud.CloudProvider) {
 		cm, err := GetCloudManager(cluster.Spec.Cloud.CloudProvider, ctx)
 		if err != nil {
@@ -187,7 +187,7 @@ func GetAdminConfig(ctx context.Context, cluster *api.Cluster) (*api.KubeConfig,
 		return cm.GetKubeConfig(cluster)
 	}
 	var err error
-	ctx, err = LoadCACertificates(ctx, cluster)
+	ctx, err = LoadCACertificates(ctx, cluster, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func Apply(ctx context.Context, opts *options.ApplyConfig) ([]api.Action, error)
 		return nil, errors.New("missing cluster name")
 	}
 
-	cluster, err := Store(ctx).Clusters().Get(opts.ClusterName)
+	cluster, err := Store(ctx).Owner(opts.Owner).Clusters().Get(opts.ClusterName)
 	if err != nil {
 		return nil, errors.Errorf("cluster `%s` does not exist. Reason: %v", opts.ClusterName, err)
 	}
@@ -242,16 +242,17 @@ func Apply(ctx context.Context, opts *options.ApplyConfig) ([]api.Action, error)
 	if err != nil {
 		return nil, err
 	}
+	cm.SetOwner(opts.Owner)
 
 	return cm.Apply(cluster, opts.DryRun)
 }
 
-func CheckForUpdates(ctx context.Context, name string) (string, error) {
+func CheckForUpdates(ctx context.Context, name, owner string) (string, error) {
 	if name == "" {
 		return "", errors.New("missing cluster name")
 	}
 
-	cluster, err := Store(ctx).Clusters().Get(name)
+	cluster, err := Store(ctx).Owner(owner).Clusters().Get(name)
 	if err != nil {
 		return "", errors.Errorf("cluster `%s` does not exist. Reason: %v", name, err)
 	}
@@ -264,10 +265,10 @@ func CheckForUpdates(ctx context.Context, name string) (string, error) {
 	if cluster.Status.Phase == api.ClusterDeleted {
 		return "", nil
 	}
-	if ctx, err = LoadCACertificates(ctx, cluster); err != nil {
+	if ctx, err = LoadCACertificates(ctx, cluster, owner); err != nil {
 		return "", err
 	}
-	if ctx, err = LoadSSHKey(ctx, cluster); err != nil {
+	if ctx, err = LoadSSHKey(ctx, cluster, owner); err != nil {
 		return "", err
 	}
 	kc, err := NewAdminClient(ctx, cluster)
@@ -278,7 +279,7 @@ func CheckForUpdates(ctx context.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	upm := NewUpgradeManager(ctx, cm, kc, cluster)
+	upm := NewUpgradeManager(ctx, cm, kc, cluster, owner)
 	upgrades, err := upm.GetAvailableUpgrades()
 	if err != nil {
 		return "", err
@@ -287,7 +288,7 @@ func CheckForUpdates(ctx context.Context, name string) (string, error) {
 	return "", nil
 }
 
-func UpdateSpec(ctx context.Context, cluster *api.Cluster) (*api.Cluster, error) {
+func UpdateSpec(ctx context.Context, cluster *api.Cluster, owner string) (*api.Cluster, error) {
 	if cluster == nil {
 		return nil, errors.New("missing cluster")
 	} else if cluster.Name == "" {
@@ -296,12 +297,12 @@ func UpdateSpec(ctx context.Context, cluster *api.Cluster) (*api.Cluster, error)
 		return nil, errors.New("missing cluster version")
 	}
 
-	existing, err := Store(ctx).Clusters().Get(cluster.Name)
+	existing, err := Store(ctx).Owner(owner).Clusters().Get(cluster.Name)
 	if err != nil {
 		return nil, errors.Errorf("cluster `%s` does not exist. Reason: %v", cluster.Name, err)
 	}
 	cluster.Status = existing.Status
 	cluster.Generation = time.Now().UnixNano()
 
-	return Store(ctx).Clusters().Update(cluster)
+	return Store(ctx).Owner(owner).Clusters().Update(cluster)
 }

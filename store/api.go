@@ -12,6 +12,11 @@ import (
 var ErrNotImplemented = errors.New("not implemented")
 
 type Interface interface {
+	Owner(string) ResourceInterface
+	ResourceInterface
+}
+
+type ResourceInterface interface {
 	Credentials() CredentialStore
 
 	Clusters() ClusterStore

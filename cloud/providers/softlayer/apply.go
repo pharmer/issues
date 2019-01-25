@@ -25,10 +25,10 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	}
 	cm.cluster = in
 	cm.namer = namer{cluster: cm.cluster}
-	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster); err != nil {
+	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster, cm.owner); err != nil {
 		return nil, err
 	}
-	if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster); err != nil {
+	if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster, cm.owner); err != nil {
 		return nil, err
 	}
 	if cm.conn, err = NewConnector(cm.ctx, cm.cluster); err != nil {
@@ -62,13 +62,13 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	}
 
 	if cm.cluster.DeletionTimestamp != nil && cm.cluster.Status.Phase != api.ClusterDeleted {
-		nodeGroups, err := Store(cm.ctx).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
+		nodeGroups, err := Store(cm.ctx).Owner(cm.owner).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
 		for _, ng := range nodeGroups {
 			ng.Spec.Nodes = 0
-			_, err := Store(cm.ctx).NodeGroups(cm.cluster.Name).Update(ng)
+			_, err := Store(cm.ctx).Owner(cm.owner).NodeGroups(cm.cluster.Name).Update(ng)
 			if err != nil {
 				return nil, err
 			}
@@ -124,7 +124,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 
 	// -------------------------------------------------------------------ASSETS
 	var nodeGroups []*api.NodeGroup
-	nodeGroups, err = Store(cm.ctx).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
+	nodeGroups, err = Store(cm.ctx).Owner(cm.owner).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
 	if err != nil {
 		return
 	}
@@ -135,7 +135,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 	}
 	if masterNG.Spec.Template.Spec.SKU == "" {
 		masterNG.Spec.Template.Spec.SKU = "2c2m"
-		masterNG, err = Store(cm.ctx).NodeGroups(cm.cluster.Name).Update(masterNG)
+		masterNG, err = Store(cm.ctx).Owner(cm.owner).NodeGroups(cm.cluster.Name).Update(masterNG)
 		if err != nil {
 			return
 		}
@@ -178,7 +178,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			}
 
 			masterNG.Status.Nodes = 1
-			masterNG, err = Store(cm.ctx).NodeGroups(cm.cluster.Name).UpdateStatus(masterNG)
+			masterNG, err = Store(cm.ctx).Owner(cm.owner).NodeGroups(cm.cluster.Name).UpdateStatus(masterNG)
 			if err != nil {
 				return
 			}
@@ -189,7 +189,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 				return
 			}
 			// need to run ccm
-			if err = CreateCredentialSecret(cm.ctx, kc, cm.cluster); err != nil {
+			if err = CreateCredentialSecret(cm.ctx, kc, cm.cluster, cm.owner); err != nil {
 				return
 			}
 
@@ -208,7 +208,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 // Scales up/down regular node groups
 func (cm *ClusterManager) applyScale(dryRun bool) (acts []api.Action, err error) {
 	var nodeGroups []*api.NodeGroup
-	nodeGroups, err = Store(cm.ctx).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
+	nodeGroups, err = Store(cm.ctx).Owner(cm.owner).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
 	if err != nil {
 		return
 	}
@@ -233,7 +233,7 @@ func (cm *ClusterManager) applyScale(dryRun bool) (acts []api.Action, err error)
 		if ng.IsMaster() {
 			continue
 		}
-		igm := NewNodeGroupManager(cm.ctx, ng, cm.conn, kc, cm.cluster, token, nil, nil)
+		igm := NewNodeGroupManager(cm.ctx, ng, cm.conn, kc, cm.cluster, cm.owner, token, nil, nil)
 		var a2 []api.Action
 		a2, err = igm.Apply(dryRun)
 		if err != nil {
@@ -321,7 +321,7 @@ func (cm *ClusterManager) applyUpgrade(dryRun bool) (acts []api.Action, err erro
 		return
 	}
 
-	upm := NewUpgradeManager(cm.ctx, cm, kc, cm.cluster)
+	upm := NewUpgradeManager(cm.ctx, cm, kc, cm.cluster, cm.owner)
 	a, err := upm.Apply(dryRun)
 	if err != nil {
 		return

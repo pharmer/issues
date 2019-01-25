@@ -38,11 +38,11 @@ func NewCmdBackup() *cobra.Command {
 				}
 				ctx := cloud.NewContext(context.Background(), cfg, config.GetEnv(cmd.Flags()))
 
-				cluster, err := cloud.Store(ctx).Clusters().Get(opts.ClusterName)
+				cluster, err := cloud.Store(ctx).Owner(opts.Owner).Clusters().Get(opts.ClusterName)
 				if err != nil {
 					term.Fatalln(err)
 				}
-				c2, err := cloud.GetAdminConfig(ctx, cluster)
+				c2, err := cloud.GetAdminConfig(ctx, cluster, opts.Owner)
 				if err != nil {
 					term.Fatalln(err)
 				}
