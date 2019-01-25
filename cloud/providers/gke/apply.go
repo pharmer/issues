@@ -23,7 +23,7 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	}
 	cm.cluster = in
 	cm.namer = namer{cluster: cm.cluster}
-	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster); err != nil {
+	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster, cm.owner); err != nil {
 		return nil, err
 	}
 	/*if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster); err != nil {
@@ -84,7 +84,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 
 	cluster, _ = cm.conn.containerService.Projects.Zones.Clusters.Get(cm.conn.cluster.Spec.Cloud.Project, cm.conn.cluster.Spec.Cloud.Zone, cm.cluster.Name).Do()
 	if cluster == nil && !dryRun {
-		if cluster, err = encodeCluster(cm.ctx, cm.cluster); err != nil {
+		if cluster, err = encodeCluster(cm.ctx, cm.cluster, cm.owner); err != nil {
 			return acts, err
 		}
 
@@ -106,7 +106,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		if err != nil {
 			return acts, err
 		}
-		if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster); err != nil {
+		if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster, cm.owner); err != nil {
 			return acts, err
 		}
 		var kc kubernetes.Interface
@@ -129,7 +129,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 
 func (cm *ClusterManager) applyScale(dryRun bool) (acts []api.Action, err error) {
 	var nodeGroups []*api.NodeGroup
-	nodeGroups, err = Store(cm.ctx).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
+	nodeGroups, err = Store(cm.ctx).Owner(cm.owner).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
 	if err != nil {
 		return
 	}

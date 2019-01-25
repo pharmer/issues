@@ -1,13 +1,12 @@
-hash: becb5755d9aafbff5dfb7d74bcf89b9215776ad4c2051deb805568e841ff6980
-updated: 2018-12-07T15:26:20.58790893+06:00
+hash: b77ca34ea028cfc20daff73c5fdcf48ecbfadc57e164463a5658cdfdeb42e710
+updated: 2019-03-05T16:01:52.7523476+06:00
 imports:
 - name: cloud.google.com/go
-  version: 3b1ae45394a234c385be014e9a488f2bb6eef821
+  version: 74b12019e2aa53ec27882158f59192d7cd6d1998
   subpackages:
   - compute/metadata
-  - internal
 - name: github.com/appscode/go
-  version: aa0a55d74dac66f9b9bec9c0e7b67944115a3f44
+  version: 52eaa8008e2e5fe8df77ac6fb2fd45e3ea2ae47c
   subpackages:
   - analytics
   - context
@@ -176,7 +175,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: 5899d5c5e619fda5fa86e14795a835f473ca284c
 - name: github.com/go-xorm/builder
-  version: dc8bf48f58fab2b4da338ffd25191905fd741b8f
+  version: 03eb88feccce3e477c318ce7f6f1b386544ab20b
 - name: github.com/go-xorm/core
   version: c10e21e7e1cec20e09398f2dfae385e58c8df555
 - name: github.com/go-xorm/xorm
@@ -234,7 +233,7 @@ imports:
 - name: github.com/gorilla/websocket
   version: 2d1e4548da234d9cb742cc3628556fef86aafbac
 - name: github.com/graymeta/stow
-  version: 1849a82ac7fbd3e5cb144bcc711544e90903eac4
+  version: 8020e152292b2cdbdca30274fec24e18905f254d
   repo: https://github.com/appscode/stow.git
   vcs: git
   subpackages:
@@ -294,7 +293,7 @@ imports:
 - name: github.com/mitchellh/go-wordwrap
   version: ad45545899c7b13c020ea92b2072220eefad42b8
 - name: github.com/moby/moby
-  version: 5a9cb68eb3ac3a195ab08c6b3c3a4f1ec18ebf9e
+  version: 8422e6f6fa04eb8ee805a98067ee490a86ce3b98
   subpackages:
   - pkg/term
 - name: github.com/modern-go/concurrent
@@ -306,7 +305,7 @@ imports:
 - name: github.com/moul/gotty-client
   version: c1b82f1af3ebb2febba268415cb1c90686078f80
 - name: github.com/ncw/swift
-  version: 6f342da371d063863f2f354f183e4ab0ef72d287
+  version: a12c20e04ddb87207d41409a7afda9848aba8df2
 - name: github.com/onsi/ginkgo
   version: fa5fabab2a1bfbd924faf4c067d07ae414e2aedf
   subpackages:
@@ -342,7 +341,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/packethost/packngo
-  version: b36133050ae5b072233083a26657db33f4e46560
+  version: caf7bb8cb1044343747215c54e45a01dbb41c8a2
 - name: github.com/pborman/uuid
   version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/peterbourgon/diskv
@@ -374,7 +373,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/skratchdot/open-golang
-  version: 75fb7ed4208cf72d323d7d02fd1a5964a7a9073c
+  version: a2dfa6d0dab6634ecf39251031a3d52db73b5c7e
   subpackages:
   - open
 - name: github.com/softlayer/softlayer-go

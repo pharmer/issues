@@ -14,10 +14,11 @@ type SSHKey struct {
 	CreationTimestamp time.Time  `xorm:"bigint created 'creationTimestamp'"`
 	DateModified      time.Time  `xorm:"bigint updated 'dateModified'"`
 	DeletionTimestamp *time.Time `xorm:"bigint null 'deletionTimestamp'"`
+	ClusterId         int64      `xorm:"bigint not null 'clusterId'"`
 }
 
 func (SSHKey) TableName() string {
-	return `"pharmer"."sshKey"`
+	return `"cluster_sshKey"`
 }
 
 func encodeSSHKey(pub, priv []byte) (*SSHKey, error) {

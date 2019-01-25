@@ -67,37 +67,37 @@ func RunUpdateNodeGroup(ctx context.Context, opts *options.NodeGroupEditConfig, 
 			return err
 		}
 
-		updated, err := cloud.Store(ctx).NodeGroups(clusterName).Get(local.Name)
+		updated, err := cloud.Store(ctx).Owner(opts.Owner).NodeGroups(clusterName).Get(local.Name)
 		if err != nil {
 			return err
 		}
 		updated.ObjectMeta = local.ObjectMeta
 		updated.Spec = local.Spec
 
-		original, err := cloud.Store(ctx).NodeGroups(clusterName).Get(updated.Name)
+		original, err := cloud.Store(ctx).Owner(opts.Owner).NodeGroups(clusterName).Get(updated.Name)
 		if err != nil {
 			return err
 		}
-		if err := UpdateNodeGroup(ctx, original, updated, clusterName); err != nil {
+		if err := UpdateNodeGroup(ctx, original, updated, clusterName, opts.Owner); err != nil {
 			return err
 		}
 		term.Println(fmt.Sprintf(`nodegroup "%s" replaced`, original.Name))
 		return nil
 	}
 
-	original, err := cloud.Store(ctx).NodeGroups(clusterName).Get(opts.NgName)
+	original, err := cloud.Store(ctx).Owner(opts.Owner).NodeGroups(clusterName).Get(opts.NgName)
 	if err != nil {
 		return err
 	}
 
 	// Check if flags are provided to update
 	if opts.DoNotDelete {
-		updated, err := cloud.Store(ctx).NodeGroups(clusterName).Get(opts.NgName)
+		updated, err := cloud.Store(ctx).Owner(opts.Owner).NodeGroups(clusterName).Get(opts.NgName)
 		if err != nil {
 			return err
 		}
 
-		if err := UpdateNodeGroup(ctx, original, updated, clusterName); err != nil {
+		if err := UpdateNodeGroup(ctx, original, updated, clusterName, opts.Owner); err != nil {
 			return err
 		}
 		term.Println(fmt.Sprintf(`nodegroup "%s" updated`, original.Name))
@@ -179,7 +179,7 @@ func editNodeGroup(ctx context.Context, opts *options.NodeGroupEditConfig, origi
 
 			containsError = false
 
-			if err := UpdateNodeGroup(ctx, original, updated, opts.ClusterName); err != nil {
+			if err := UpdateNodeGroup(ctx, original, updated, opts.ClusterName, opts.Owner); err != nil {
 				return err
 			}
 
@@ -192,7 +192,7 @@ func editNodeGroup(ctx context.Context, opts *options.NodeGroupEditConfig, origi
 	return editFn()
 }
 
-func UpdateNodeGroup(ctx context.Context, original, updated *api.NodeGroup, clusterName string) error {
+func UpdateNodeGroup(ctx context.Context, original, updated *api.NodeGroup, clusterName, owner string) error {
 	originalByte, err := yaml.Marshal(original)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func UpdateNodeGroup(ctx context.Context, original, updated *api.NodeGroup, clus
 		return err
 	}
 
-	_, err = cloud.Store(ctx).NodeGroups(clusterName).Update(updated)
+	_, err = cloud.Store(ctx).Owner(owner).NodeGroups(clusterName).Update(updated)
 	if err != nil {
 		return err
 	}
