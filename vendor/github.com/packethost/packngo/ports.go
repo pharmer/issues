@@ -73,7 +73,7 @@ type DisbondRequest struct {
 }
 
 func (i *DevicePortServiceOp) GetBondPort(deviceID string) (*Port, error) {
-	device, _, err := i.client.Devices.Get(deviceID)
+	device, _, err := i.client.Devices.Get(deviceID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (i *DevicePortServiceOp) GetBondPort(deviceID string) (*Port, error) {
 }
 
 func (i *DevicePortServiceOp) GetPortByName(deviceID, name string) (*Port, error) {
-	device, _, err := i.client.Devices.Get(deviceID)
+	device, _, err := i.client.Devices.Get(deviceID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (i *DevicePortServiceOp) PortToLayerThree(portID string) (*Port, *Response,
 }
 
 func (i *DevicePortServiceOp) DeviceNetworkType(deviceID string) (NetworkType, error) {
-	d, _, err := i.client.Devices.Get(deviceID)
+	d, _, err := i.client.Devices.Get(deviceID, nil)
 	if err != nil {
 		return NetworkUnknown, err
 	}
@@ -186,9 +186,8 @@ func (i *DevicePortServiceOp) DeviceNetworkType(deviceID string) (NetworkType, e
 				}
 			}
 			return NetworkL2Bonded, nil
-		} else {
-			return NetworkHybrid, nil
 		}
+		return NetworkHybrid, nil
 	}
 	return NetworkL2Individual, nil
 }
@@ -204,7 +203,7 @@ func (i *DevicePortServiceOp) DeviceToLayerThree(deviceID string) (*Device, erro
 	if err != nil {
 		return nil, err
 	}
-	d, _, err := i.client.Devices.Get(deviceID)
+	d, _, err := i.client.Devices.Get(deviceID, nil)
 	return d, err
 }
 
@@ -219,7 +218,7 @@ func (i *DevicePortServiceOp) DeviceToLayerTwo(deviceID string) (*Device, error)
 	if err != nil {
 		return nil, err
 	}
-	d, _, err := i.client.Devices.Get(deviceID)
+	d, _, err := i.client.Devices.Get(deviceID, nil)
 	return d, err
 
 }

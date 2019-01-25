@@ -7,12 +7,12 @@ import (
 	"regexp"
 	"strings"
 
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	versionutil "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/kubernetes"
-	versionutil "k8s.io/kubernetes/pkg/util/version"
 )
 
 var (
@@ -138,7 +138,7 @@ func (g *KubeVersionGetter) IsUpgradeRequested() (bool, error) {
 			return false, err
 		}
 
-		requested, err := versionutil.ParseSemantic(g.cluster.Spec.KubernetesVersion)
+		requested, err := versionutil.ParseSemantic(g.cluster.ClusterConfig().KubernetesVersion)
 		if err != nil {
 			return false, err
 		}

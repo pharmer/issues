@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/appscode/go-version"
+	version "github.com/appscode/go-version"
 	"github.com/ghodss/yaml"
 	api "github.com/pharmer/pharmer/apis/v1alpha1"
 	"github.com/pkg/errors"
@@ -290,6 +290,9 @@ mkdir -p ~/.kube
 sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
 sudo chown $(id -u):$(id -g) ~/.kube/config
 
+kubectl apply \
+  -f https://raw.githubusercontent.com/pharmer/addons/clusterapi/cluster-api/cluster-crd.yaml \
+  --kubeconfig /etc/kubernetes/admin.conf
 
 {{ if .ExternalProvider }}
 {{ template "ccm" . }}

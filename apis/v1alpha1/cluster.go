@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appscode/go-version"
+	version "github.com/appscode/go-version"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1alpha3"

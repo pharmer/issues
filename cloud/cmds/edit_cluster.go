@@ -10,7 +10,7 @@ import (
 
 	"github.com/appscode/go/term"
 	"github.com/ghodss/yaml"
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pharmer/pharmer/cloud"
 	"github.com/pharmer/pharmer/cloud/cmds/options"
 	"github.com/pharmer/pharmer/config"
@@ -99,10 +99,10 @@ func RunUpdateCluster(ctx context.Context, opts *options.ClusterEditConfig, out,
 
 		//TODO: Check provided flags, and set value
 		if opts.Locked {
-			updated.Spec.Locked = opts.Locked
+			updated.Spec.Config.Locked = opts.Locked
 		}
 		if opts.KubernetesVersion != "" {
-			updated.Spec.KubernetesVersion = opts.KubernetesVersion
+			updated.Spec.Config.KubernetesVersion = opts.KubernetesVersion
 		}
 
 		if err := UpdateCluster(ctx, original, updated, opts.Owner); err != nil {
