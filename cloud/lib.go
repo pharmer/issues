@@ -39,9 +39,11 @@ func Create(ctx context.Context, cluster *api.Cluster, owner string) (*api.Clust
 		return nil, errors.New("missing cluster version")
 	}
 
+	exists := false
 	_, err := Store(ctx).Owner(owner).Clusters().Get(cluster.Name)
 	if err == nil {
-		return nil, errors.Errorf("cluster exists with name `%s`", cluster.Name)
+		exists = true
+		//return nil, errors.Errorf("cluster exists with name `%s`", cluster.Name)
 	}
 
 	cm, err := GetCloudManager(config.Cloud.CloudProvider, ctx)
@@ -52,8 +54,14 @@ func Create(ctx context.Context, cluster *api.Cluster, owner string) (*api.Clust
 	if err = cm.SetDefaultCluster(cluster, config); err != nil {
 		return nil, err
 	}
-	if cluster, err = Store(ctx).Owner(owner).Clusters().Create(cluster); err != nil {
-		return nil, err
+	if exists {
+		if cluster, err = Store(ctx).Owner(owner).Clusters().Update(cluster); err != nil {
+			return nil, err
+		}
+	} else {
+		if cluster, err = Store(ctx).Owner(owner).Clusters().Create(cluster); err != nil {
+			return nil, err
+		}
 	}
 
 	if ctx, err = CreateCACertificates(ctx, cluster, owner); err != nil {

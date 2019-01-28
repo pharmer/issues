@@ -8,6 +8,7 @@ import (
 	. "github.com/pharmer/pharmer/cloud"
 	"net/http"
 	"strconv"
+	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 func (a *Apiserver) CreateCluster(w http.ResponseWriter, r *http.Request) {
@@ -19,9 +20,7 @@ func (a *Apiserver) CreateCluster(w http.ResponseWriter, r *http.Request) {
 	if operation.OperationId == "" {
 		// return error
 	}
-	fmt.Println(operation.OperationId, "***********")
 
-	fmt.Println(Store(a.ctx).Clusters().Get("do2"))
 
 	obj, err := Store(a.ctx).Operations().Get(operation.OperationId)
 	if err != nil {
@@ -32,9 +31,11 @@ func (a *Apiserver) CreateCluster(w http.ResponseWriter, r *http.Request) {
 
 	if obj.State == api.OperationPending {
 		obj.State = api.OperationRunning
-		Store(a.ctx).Operations().Update(obj)
+		obj, err = Store(a.ctx).Operations().Update(obj)
+		fmt.Println(obj)
 		cluster, err := Store(a.ctx).Clusters().Get(strconv.Itoa(int(obj.ClusterID)))
-
+		fmt.Println(cluster, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+		cluster.Spec.ClusterAPI = &clusterapi.Cluster{}
 		cluster, err = Create(a.ctx, cluster, strconv.Itoa(int(obj.UserID)))
 		if err != nil {
 			fmt.Println(err)
