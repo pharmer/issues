@@ -2,10 +2,10 @@ package cmds
 
 import (
 	"context"
-	"net/http"
+	"fmt"
 
 	"github.com/appscode/go/term"
-	"github.com/gorilla/mux"
+	stan "github.com/nats-io/go-nats-streaming"
 	"github.com/pharmer/pharmer/apiserver"
 	"github.com/pharmer/pharmer/cloud"
 	"github.com/pharmer/pharmer/config"
@@ -14,6 +14,8 @@ import (
 
 func newCmdServer() *cobra.Command {
 	//opts := options.NewClusterCreateConfig()
+	var natsurl string
+	var clientid string
 	cmd := &cobra.Command{
 		Use:               "serve",
 		Short:             "Pharmer apiserver",
@@ -32,19 +34,40 @@ func newCmdServer() *cobra.Command {
 			if cfg.Store.Postgres == nil {
 				term.Fatalln("Use postgres as storage provider")
 			}
+			fmt.Println(natsurl)
+
 			ctx := cloud.NewContext(context.Background(), cfg, config.GetEnv(cmd.Flags()))
-			err = http.ListenAndServe(":4155", route(ctx))
+
+			err = runServer(ctx, natsurl, clientid)
+
+			//err = http.ListenAndServe(":4155", route(ctx, conn))
 			term.ExitOnError(err)
+			<-make(chan interface{})
 		},
 	}
+	cmd.Flags().StringVar(&natsurl, "nats-url", "nats://localhost:4222", "Nats streaming server url")
+	cmd.Flags().StringVar(&clientid, "nats-client-id", "worker-p", "Nats streaming server client id")
 
 	return cmd
 }
 
-func route(ctx context.Context) *mux.Router {
-	server := apiserver.New(ctx)
+//const ClientID = "worker-x"
 
-	router := mux.NewRouter()
-	router.HandleFunc("/api/cluster/operation", server.CreateCluster).Methods("POST")
-	return router
+func runServer(ctx context.Context, url, clientId string) error {
+	conn, err := stan.Connect(
+		"pharmer-cluster",
+		clientId,
+		stan.NatsURL(url),
+	)
+	fmt.Println(err, "..............", clientId)
+	if err != nil {
+		return err
+	}
+
+	//defer apiserver.LogCloser(conn)
+
+	fmt.Println("II")
+	server := apiserver.New(ctx, conn)
+	return server.CreateCluster()
+
 }
