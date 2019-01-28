@@ -2,6 +2,7 @@ package vfs
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -263,4 +264,9 @@ func (s *FileStore) Certificates(cluster string) store.CertificateStore {
 
 func (s *FileStore) SSHKeys(cluster string) store.SSHKeyStore {
 	return &sshKeyFileStore{container: s.container, prefix: s.prefix, cluster: cluster, owner: s.owner}
+}
+
+func (s *FileStore) Operations() store.OperationStore {
+	fmt.Println("file operation nil")
+	return nil
 }

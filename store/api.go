@@ -39,7 +39,7 @@ type CredentialStore interface {
 }
 
 type OperationStore interface {
-	Get(code string) (*apiv1.Operation, error)
+	Get(id string) (*apiv1.Operation, error)
 	Update(obj *apiv1.Operation) (*apiv1.Operation, error)
 }
 

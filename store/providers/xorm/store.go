@@ -78,11 +78,18 @@ func (s *XormStore) SSHKeys(cluster string) store.SSHKeyStore {
 	return &sshKeyXormStore{engine: s.engine, cluster: cluster, owner: s.owner}
 }
 
+func (s *XormStore) Operations() store.OperationStore {
+	fmt.Println("HERER")
+	return &operationXormStore{engine: s.engine}
+}
+
 // Connects to any databse using provided credentials
 func newPGEngine(user, password, host string, port int64, dbName string) (*xorm.Engine, error) {
 	cnnstr := fmt.Sprintf("user=%v password=%v host=%v port=%v dbname=%v sslmode=disable",
 		user, password, host, port, dbName)
+	fmt.Println(cnnstr)
 	engine, err := xorm.NewEngine("postgres", cnnstr)
+	fmt.Println(err)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
