@@ -11,7 +11,7 @@ import (
 	api "github.com/pharmer/pharmer/apis/v1alpha1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1alpha3"
+	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta1"
 )
 
 // https://github.com/pharmer/pharmer/issues/347
@@ -21,6 +21,7 @@ var kubernetesCNIVersions = map[string]string{
 	"1.10.0": "0.6.0",
 	"1.11.0": "0.6.0",
 	"1.12.0": "0.6.0",
+	"1.13.0": "0.6.0",
 }
 
 var prekVersions = map[string]string{
@@ -29,6 +30,7 @@ var prekVersions = map[string]string{
 	"1.10.0": "1.10.0",
 	"1.11.0": "1.12.0-alpha.3",
 	"1.12.0": "1.12.0-alpha.3",
+	"1.13.0": "1.13.0",
 }
 
 type TemplateData struct {
@@ -59,7 +61,13 @@ func (td TemplateData) InitConfigurationYAML() (string, error) {
 	var cb []byte
 	var err error
 
-	cb, err = yaml.Marshal(td.InitConfiguration)
+	if td.IsVersionLessThan1_13() {
+		conf := ConvertInitConfigFromV1bet1ToV1alpha3(td.InitConfiguration)
+		cb, err = yaml.Marshal(conf)
+	} else {
+		cb, err = yaml.Marshal(td.InitConfiguration)
+	}
+
 	return string(cb), err
 }
 
@@ -69,7 +77,12 @@ func (td TemplateData) ClusterConfigurationYAML() (string, error) {
 	}
 	var cb []byte
 	var err error
-	cb, err = yaml.Marshal(td.ClusterConfiguration)
+	if td.IsVersionLessThan1_13() {
+		conf := ConvertClusterConfigFromV1beta1ToV1alpha3(td.ClusterConfiguration)
+		cb, err = yaml.Marshal(conf)
+	} else {
+		cb, err = yaml.Marshal(td.ClusterConfiguration)
+	}
 	return string(cb), err
 }
 
@@ -82,26 +95,32 @@ func (td TemplateData) JoinConfigurationYAML() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var cb []byte
 
 	cfg := kubeadmapi.JoinConfiguration{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "kubeadm.k8s.io/v1alpha3",
+			APIVersion: "kubeadm.k8s.io/v1beta1",
 			Kind:       "JoinConfiguration",
 		},
 		NodeRegistration: kubeadmapi.NodeRegistrationOptions{
 			KubeletExtraArgs: td.KubeletExtraArgs,
 		},
-		ClusterName: td.ClusterName,
-		Token:       td.KubeadmToken,
-		APIEndpoint: kubeadmapi.APIEndpoint{
-			AdvertiseAddress: apiAddress[0],
-			BindPort:         int32(apiPort),
+		Discovery: kubeadmapi.Discovery{
+			BootstrapToken: &kubeadmapi.BootstrapTokenDiscovery{
+				Token:             td.KubeadmToken,
+				APIServerEndpoint: td.APIServerAddress,
+				CACertHashes:      []string{td.CAHash},
+			},
 		},
-		DiscoveryTokenAPIServers:   []string{td.APIServerAddress},
-		DiscoveryTokenCACertHashes: []string{td.CAHash},
 	}
-
-	cb, err := yaml.Marshal(cfg)
+	cb, err = yaml.Marshal(cfg)
+	if td.IsVersionLessThan1_13() {
+		conf := ConvertJoinConfigFromV1beta1ToV1alpha3(&cfg)
+		conf.ClusterName = td.ClusterName
+		conf.APIEndpoint.AdvertiseAddress = apiAddress[0]
+		conf.APIEndpoint.BindPort = int32(apiPort)
+		cb, err = yaml.Marshal(conf)
+	}
 	return string(cb), err
 }
 
@@ -117,6 +136,10 @@ func (td TemplateData) IsVersionLessThan(currentVersion string) bool {
 	cv, _ := version.NewVersion(td.KubernetesVersion)
 	v11, _ := version.NewVersion(currentVersion)
 	return cv.LessThan(v11)
+}
+
+func (td TemplateData) IsVersionLessThan1_13() bool {
+	return td.IsVersionLessThan("1.13.0")
 }
 
 func (td TemplateData) IsKubeadmV1Alpha3() bool {
@@ -402,11 +425,11 @@ chmod 600 /etc/kubernetes/pki/ca.key /etc/kubernetes/pki/front-proxy-ca.key
 
 	_ = template.Must(StartupScriptTemplate.New("ccm").Parse(`
 # Deploy CCM RBAC
-cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.11/cloud-controller-manager/rbac.yaml'
+cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.13/cloud-controller-manager/rbac.yaml'
 exec_until_success "$cmd"
 
 # Deploy CCM DaemonSet
-cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.11/cloud-controller-manager/{{ .Provider }}/installer.yaml'
+cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.13/cloud-controller-manager/{{ .Provider }}/installer.yaml'
 exec_until_success "$cmd"
 
 until [ $(kubectl get pods -n kube-system -l k8s-app=kube-dns -o jsonpath='{.items[0].status.phase}' --kubeconfig /etc/kubernetes/admin.conf) == "Running" ]

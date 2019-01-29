@@ -73,6 +73,7 @@ type MachineActuatorParams struct {
 	CloudConnector *cloudConnector
 	EventRecorder  record.EventRecorder
 	Scheme         *runtime.Scheme
+	Owner          string
 	//MachineSetupConfigGetter DOClientMachineSetupConfigGetter
 
 }
@@ -85,6 +86,7 @@ func NewMachineActuator(params MachineActuatorParams) *MachineActuator {
 		kubeadm:       getKubeadm(params),
 		eventRecorder: params.EventRecorder,
 		scheme:        params.Scheme,
+		owner:         params.Owner,
 		//machineSetupConfigGetter: MachineSetup(params.Ctx),
 	}
 }

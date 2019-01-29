@@ -49,6 +49,7 @@ func (cm *ClusterManager) InitializeMachineActuator(mgr manager.Manager) error {
 		EventRecorder: mgr.GetRecorder(Recorder),
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
+		Owner:         cm.owner,
 	})
 	common.RegisterClusterProvisioner(UID, ma)
 	return nil

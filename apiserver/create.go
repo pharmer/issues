@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"github.com/golang/glog"
 	"time"
+	opts "github.com/pharmer/pharmer/cloud/cmds/options"
 )
 
 func (a *Apiserver) CreateCluster() error {
@@ -36,7 +37,6 @@ func (a *Apiserver) CreateCluster() error {
 			fmt.Println(err)
 		}
 		fmt.Println(obj, obj.ID)
-		fmt.Println(obj.Code, "XXXXXXXXXXXX", obj.State)
 
 		if obj.State == api.OperationPending {
 			obj.State = api.OperationRunning
@@ -44,6 +44,7 @@ func (a *Apiserver) CreateCluster() error {
 			fmt.Println(obj)
 			cluster, err := Store(a.ctx).Clusters().Get(strconv.Itoa(int(obj.ClusterID)))
 			cluster.Spec.ClusterAPI = &clusterapi.Cluster{}
+			cluster.Spec.ClusterAPI.Name = cluster.Name
 
 			cluster, err = Create(a.ctx, cluster, strconv.Itoa(int(obj.UserID)))
 			if err != nil {
@@ -51,14 +52,14 @@ func (a *Apiserver) CreateCluster() error {
 				//term.Fatalln(err)
 			}
 
-			/*go func(o *opts.ApplyConfig) {
+			go func(o *opts.ApplyConfig) {
 				acts, err := Apply(a.ctx, o)
 				fmt.Println(acts, err)
 			}(&opts.ApplyConfig{
-				ClusterName: cluster.Name,
-				Owner:       obj.UserID,
+				ClusterName: cluster.Name, //strconv.Itoa(int(obj.ClusterID)),
+				Owner:       strconv.Itoa(int(obj.UserID)),
 				DryRun:      false,
-			})*/
+			})
 		}
 		if err := msg.Ack(); err != nil {
 			log.Printf("failed to ACK msg: %d", msg.Sequence)

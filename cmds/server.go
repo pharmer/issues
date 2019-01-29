@@ -38,7 +38,15 @@ func newCmdServer() *cobra.Command {
 
 			ctx := cloud.NewContext(context.Background(), cfg, config.GetEnv(cmd.Flags()))
 
-			err = runServer(ctx, natsurl, clientid)
+			conn, err := stan.Connect(
+				"pharmer-cluster",
+				clientid,
+				stan.NatsURL(natsurl),
+			)
+			defer apiserver.LogCloser(conn)
+			term.ExitOnError(err)
+
+			err = runServer(ctx, conn)
 
 			//err = http.ListenAndServe(":4155", route(ctx, conn))
 			term.ExitOnError(err)
@@ -53,16 +61,7 @@ func newCmdServer() *cobra.Command {
 
 //const ClientID = "worker-x"
 
-func runServer(ctx context.Context, url, clientId string) error {
-	conn, err := stan.Connect(
-		"pharmer-cluster",
-		clientId,
-		stan.NatsURL(url),
-	)
-	fmt.Println(err, "..............", clientId)
-	if err != nil {
-		return err
-	}
+func runServer(ctx context.Context, conn stan.Conn) error {
 
 	//defer apiserver.LogCloser(conn)
 

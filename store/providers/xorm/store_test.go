@@ -3,6 +3,7 @@ package xorm
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -13,10 +14,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
+func TestJM(t *testing.T) {
+	fmt.Println(os.Getenv("HOME"))
+}
+
 func TestClusterEngine(t *testing.T) {
-	engine, err := newPGEngine("postgres", "postgres", "127.0.0.1", 5432, "postgres")
-	fmt.Println(err)
-	x := New(engine)
+	//engine, err := newPGEngine("postgres", "postgres", "127.0.0.1", 5432, "postgres")
+	//fmt.Println(err)
+	//x := New(engine)
 	cluster := &api.Cluster{}
 	cluster.Name = "xorm-test"
 	cluster.Spec.Cloud.CloudProvider = "digitalocean"
@@ -50,8 +55,8 @@ func TestClusterEngine(t *testing.T) {
 		Phase: api.ClusterPending,
 	}
 
-	_, err = x.Clusters().Create(cluster)
-	fmt.Println(err)
+	//_, err = x.Clusters().Create(cluster)
+	//fmt.Println(err)
 }
 
 func TestCred(t *testing.T) {

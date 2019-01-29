@@ -26,7 +26,7 @@ func encodeCredential(in *api.Credential) (*Credential, error) {
 	cred := &Credential{
 		//Kind:              in.Kind,
 		//APIVersion:        in.APIVersion,
-		Name:              in.Name,
+		Name: in.Name,
 		//ResourceVersion:   in.ResourceVersion,
 		//Generation:        in.Generation,
 		DeletionTimestamp: nil,
