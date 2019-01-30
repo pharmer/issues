@@ -35,12 +35,13 @@ const (
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, func(ctx context.Context, m manager.Manager) error {
+	AddToManagerFuncs = append(AddToManagerFuncs, func(ctx context.Context, m manager.Manager, owner string) error {
 		actuator := NewMachineActuator(MachineActuatorParams{
 			Ctx:           ctx,
 			EventRecorder: m.GetRecorder(Recorder),
 			Client:        m.GetClient(),
 			Scheme:        m.GetScheme(),
+			Owner:         owner,
 		})
 		return machine.AddWithActuator(m, actuator)
 	})
@@ -275,7 +276,7 @@ func (do *MachineActuator) Update(_ context.Context, cluster *clusterv1.Cluster,
 }
 
 func (do *MachineActuator) Exists(_ context.Context, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (bool, error) {
-	fmt.Println("call for checking machine existence", machine.Name)
+	fmt.Println("call for checking machine existence", machine.Name, "owner", do.owner)
 	clusterName := cluster.Name
 	if _, found := machine.Labels[api.PharmerCluster]; found {
 		clusterName = machine.Labels[api.PharmerCluster]

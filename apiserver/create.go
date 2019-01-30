@@ -17,8 +17,7 @@ import (
 
 func (a *Apiserver) CreateCluster() error {
 
-	sub, err := a.natsConn.Subscribe("create-cluster",  func(msg *stan.Msg) {
-		fmt.Println("HERE...........")
+	sub, err := a.natsConn.QueueSubscribe("create-cluster", "cluster-api-workers", func(msg *stan.Msg) {
 		fmt.Printf("seq = %d [redelivered = %v, acked = false]\n", msg.Sequence, msg.Redelivered)
 
 		operation := options.NewClusterCreateOperation()
@@ -36,20 +35,25 @@ func (a *Apiserver) CreateCluster() error {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println(obj, obj.ID)
 
 		if obj.State == api.OperationPending {
 			obj.State = api.OperationRunning
 			obj, err = Store(a.ctx).Operations().Update(obj)
-			fmt.Println(obj)
+			if err != nil {
+				glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
+			}
+
 			cluster, err := Store(a.ctx).Clusters().Get(strconv.Itoa(int(obj.ClusterID)))
+			if err != nil {
+				glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
+			}
+
 			cluster.Spec.ClusterAPI = &clusterapi.Cluster{}
 			cluster.Spec.ClusterAPI.Name = cluster.Name
 
 			cluster, err = Create(a.ctx, cluster, strconv.Itoa(int(obj.UserID)))
 			if err != nil {
-				fmt.Println(err)
-				//term.Fatalln(err)
+				glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
 			}
 
 			go func(o *opts.ApplyConfig) {

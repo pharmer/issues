@@ -14,11 +14,12 @@ import (
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, func(ctx context.Context, m manager.Manager) error {
+	AddToManagerFuncs = append(AddToManagerFuncs, func(ctx context.Context, m manager.Manager, owner string) error {
 		actuator := NewClusterActuator(m, ClusterActuatorParams{
 			Ctx:           ctx,
 			EventRecorder: m.GetRecorder(Recorder),
 			Scheme:        m.GetScheme(),
+			Owner:         owner,
 		})
 		return cluster.AddWithActuator(m, actuator)
 	})
@@ -30,12 +31,14 @@ type ClusterActuator struct {
 	client        client.Client
 	eventRecorder record.EventRecorder
 	scheme        *runtime.Scheme
+	owner         string
 }
 
 type ClusterActuatorParams struct {
 	Ctx           context.Context
 	EventRecorder record.EventRecorder
 	Scheme        *runtime.Scheme
+	Owner         string
 }
 
 func NewClusterActuator(m manager.Manager, params ClusterActuatorParams) *ClusterActuator {
@@ -44,6 +47,7 @@ func NewClusterActuator(m manager.Manager, params ClusterActuatorParams) *Cluste
 		client:        m.GetClient(),
 		eventRecorder: params.EventRecorder,
 		scheme:        params.Scheme,
+		owner:         params.Owner,
 	}
 }
 

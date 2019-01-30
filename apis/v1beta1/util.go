@@ -15,13 +15,13 @@ func AssignTypeKind(v interface{}) error {
 		return nil
 	case *Cluster:
 		if u.APIVersion == "" {
-			u.APIVersion = "v1"
+			u.APIVersion = "v1beta1"
 		}
 		u.Kind = "Cluster"
 		return nil
 	case *Credential:
 		if u.APIVersion == "" {
-			u.APIVersion = "v1"
+			u.APIVersion = "v1beta1"
 		}
 		u.Kind = "Credential"
 		return nil
