@@ -2,11 +2,11 @@ package xorm
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 
 	"github.com/go-xorm/xorm"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pharmer/pharmer/store"
+	"github.com/pkg/errors"
 )
 
 type operationXormStore struct {
@@ -37,9 +37,9 @@ func (o *operationXormStore) Update(obj *api.Operation) (*api.Operation, error) 
 	}
 
 	op := &api.Operation{
-		UserID: obj.UserID,
+		UserID:    obj.UserID,
 		ClusterID: obj.ClusterID,
-		Code: obj.Code,
+		Code:      obj.Code,
 	}
 	found, err := o.engine.Get(op)
 	if err != nil {

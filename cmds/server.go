@@ -67,6 +67,11 @@ func runServer(ctx context.Context, conn stan.Conn) error {
 
 	fmt.Println("II")
 	server := apiserver.New(ctx, conn)
-	return server.CreateCluster()
+	err := server.CreateCluster()
+	if err != nil {
+		return err
+	}
+
+	return server.DeleteCluster()
 
 }
