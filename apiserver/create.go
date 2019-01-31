@@ -3,16 +3,15 @@ package apiserver
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/golang/glog"
 	"github.com/nats-io/go-nats-streaming"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pharmer/pharmer/apiserver/options"
 	. "github.com/pharmer/pharmer/cloud"
-	"log"
-	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-	"strconv"
-	"github.com/golang/glog"
-	"time"
 	opts "github.com/pharmer/pharmer/cloud/cmds/options"
+	"github.com/pharmer/pharmer/notification"
+	"strconv"
+	"time"
 )
 
 func (a *Apiserver) CreateCluster() error {
@@ -27,13 +26,15 @@ func (a *Apiserver) CreateCluster() error {
 			return
 		}
 		if operation.OperationId == "" {
-			// return error
+			err := fmt.Errorf("Operation id not  found")
+			glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
+			return
 		}
 
 
 		obj, err := Store(a.ctx).Operations().Get(operation.OperationId)
 		if err != nil {
-			fmt.Println(err)
+			glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
 		}
 
 		if obj.State == api.OperationPending {
@@ -48,26 +49,40 @@ func (a *Apiserver) CreateCluster() error {
 				glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
 			}
 
-			cluster.Spec.ClusterAPI = &clusterapi.Cluster{}
-			cluster.Spec.ClusterAPI.Name = cluster.Name
+			cluster.InitClusterApi()
 
-			cluster, err = Create(a.ctx, cluster, strconv.Itoa(int(obj.UserID)))
+
+			noti := notification.NewNotifier(a.ctx, a.natsConn, strconv.Itoa(int(obj.ClusterID)))
+			newCtx := WithLogger(a.ctx, noti)
+
+
+			cluster, err = Create(newCtx, cluster, strconv.Itoa(int(obj.UserID)))
 			if err != nil {
 				glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
 			}
 
-			go func(o *opts.ApplyConfig) {
-				acts, err := Apply(a.ctx, o)
-				fmt.Println(acts, err)
+			go func(o *opts.ApplyConfig, obj *api.Operation) {
+				_, err := Apply(newCtx, o)
+				if err != nil {
+					glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
+				}
+				obj.State = api.OperationDone
+				obj, err = Store(newCtx).Operations().Update(obj)
+				if err != nil {
+					glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
+				}
+
+				if err := msg.Ack(); err != nil {
+					glog.Errorf("failed to ACK msg: %d", msg.Sequence)
+				}
+
 			}(&opts.ApplyConfig{
 				ClusterName: cluster.Name, //strconv.Itoa(int(obj.ClusterID)),
 				Owner:       strconv.Itoa(int(obj.UserID)),
 				DryRun:      false,
-			})
+			}, obj)
 		}
-		if err := msg.Ack(); err != nil {
-			log.Printf("failed to ACK msg: %d", msg.Sequence)
-		}
+
 
 	}, stan.SetManualAckMode(), stan.AckWait(time.Second))
 	if err != nil {

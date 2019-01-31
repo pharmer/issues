@@ -2,6 +2,7 @@ package xorm
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/go-xorm/xorm"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
@@ -31,6 +32,23 @@ func (o *operationXormStore) Get(id string) (*api.Operation, error) {
 
 func (o *operationXormStore) Update(obj *api.Operation) (*api.Operation, error) {
 	//op := &
-	_, err := o.engine.Update(obj)
+	if obj == nil {
+		return nil, errors.New("missing operation")
+	}
+
+	op := &api.Operation{
+		UserID: obj.UserID,
+		ClusterID: obj.ClusterID,
+		Code: obj.Code,
+	}
+	found, err := o.engine.Get(op)
+	if err != nil {
+		return nil, errors.Errorf("reason %v", err)
+	}
+	if !found {
+		return nil, errors.Errorf("operation %v not found", obj.Code)
+	}
+	op.State = obj.State
+	_, err = o.engine.ID(op.ID).Update(op)
 	return obj, err
 }

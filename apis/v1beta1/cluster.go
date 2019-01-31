@@ -222,3 +222,11 @@ func (c *Cluster) SetNetworkingDefaults(provider string) {
 		clusterSpec.ClusterNetwork.Pods.CIDRBlocks = []string{podSubnet}
 	}
 }
+
+func (c *Cluster) InitClusterApi() {
+	c.Spec.ClusterAPI = &clusterapi.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: c.Name,
+		},
+	}
+}
