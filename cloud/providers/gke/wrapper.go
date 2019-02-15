@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 
 	. "github.com/appscode/go/context"
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
 	"google.golang.org/api/container/v1"

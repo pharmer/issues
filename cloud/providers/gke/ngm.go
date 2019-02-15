@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
 	container "google.golang.org/api/container/v1"
 )
