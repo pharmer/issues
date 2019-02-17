@@ -41,7 +41,7 @@ func NewCmdCreateCluster() *cobra.Command {
 				nodeOpts := options.NewNodeGroupCreateConfig()
 				nodeOpts.ClusterName = cluster.Name
 				nodeOpts.Nodes = opts.Nodes
-				CreateNodeGroups(ctx, nodeOpts)
+				CreateMachineSets(ctx, nodeOpts)
 			}
 		},
 	}

@@ -90,6 +90,16 @@ type DiskInitializeParams struct {
 	DiskType   string `json:"diskType"`
 }
 
+func (c *Cluster) GKEProviderConfig(raw []byte) *GKEMachineProviderSpec {
+	//providerConfig providerConfig
+	providerConfig := &GKEMachineProviderSpec{}
+	err := json.Unmarshal(raw, providerConfig)
+	if err != nil {
+		fmt.Println("Unable to unmarshal provider config: %v", err)
+	}
+	return providerConfig
+}
+
 func (c *Cluster) SetGKEProviderConfig(cluster *clusterapi.Cluster, config *ClusterConfig) error {
 	conf := &GKEMachineProviderSpec{
 		TypeMeta: metav1.TypeMeta{
