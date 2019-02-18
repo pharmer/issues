@@ -133,6 +133,14 @@ const (
 type CloudStatus struct {
 	SShKeyExternalID string `json:"sshKeyExternalID,omitempty" protobuf:"bytes,1,opt,name=sshKeyExternalID"`
 	//AWS              *AWSStatus `json:"aws,omitempty" protobuf:"bytes,2,opt,name=aws"`
+	EKS *EKSStatus `json:"eks,omitempty" protobuf:"bytes,2,opt,name=eks"`
+}
+
+type EKSStatus struct {
+	SecurityGroup string `json:"securityGroup,omitempty" protobuf:"bytes,1,opt,name=securityGroup"`
+	VpcId         string `json:"vpcID,omitempty" protobuf:"bytes,2,opt,name=vpcID"`
+	SubnetId      string `json:"subnetID,omitempty" protobuf:"bytes,3,opt,name=subnetID"`
+	RoleArn       string `json:"roleArn,omitempty" protobuf:"bytes,4,opt,name=roleArn"`
 }
 
 type PharmerClusterStatus struct {

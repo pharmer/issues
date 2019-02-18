@@ -168,7 +168,6 @@ func NewStoreProvider(ctx context.Context, cfg *api.PharmerConfig) store.Interfa
 	} else {
 
 	}
-	fmt.Println(storeType, "XXXXXXXXXXXXXXXXXXx")
 	if store, err := store.GetProvider(storeType, ctx, cfg); err == nil {
 		return store
 	}

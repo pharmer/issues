@@ -151,7 +151,8 @@ func (s *machineSetFileStore) Delete(name string) error {
 	if name == "" {
 		return errors.New("missing node group name")
 	}
-	return s.container.RemoveItem(s.resourceID(name))
+	path := filepath.Join(s.container.ID(), s.resourceID(name))
+	return s.container.RemoveItem(path)
 }
 
 func (s *machineSetFileStore) UpdateStatus(obj *clusterv1.MachineSet) (*clusterv1.MachineSet, error) {
