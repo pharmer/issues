@@ -25,7 +25,7 @@ func (cm *ClusterManager) GetDefaultNodeSpec(cluster *api.Cluster, sku string) (
 	}, nil
 }
 
-func (cm *ClusterManager) GetDefaultProviderSpec(cluster *api.Cluster, sku string) (clusterapi.ProviderSpec, error) {
+func (cm *ClusterManager) GetDefaultMachineProviderSpec(cluster *api.Cluster, sku string, role api.MachineRole) (clusterapi.ProviderSpec, error) {
 	spec := &api.GKEMachineProviderSpec{
 		Zone:        cluster.Spec.Config.Cloud.Zone,
 		MachineType: sku,

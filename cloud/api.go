@@ -36,7 +36,7 @@ type Interface interface {
 	// Scale(req *proto.ClusterReconfigureRequest) error
 	// GetInstance(md *api.InstanceStatus) (*api.Instance, error)
 
-	GetDefaultProviderSpec(cluster *api.Cluster, sku string) (clusterv1.ProviderSpec, error)
+	GetDefaultMachineProviderSpec(cluster *api.Cluster, sku string, role api.MachineRole) (clusterv1.ProviderSpec, error)
 	InitializeMachineActuator(mgr manager.Manager) error
 
 	AddToManager(ctx context.Context, m manager.Manager) error

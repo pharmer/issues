@@ -35,6 +35,7 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	if cm.conn, err = PrepareCloud(cm.ctx, in.Name, cm.owner); err != nil {
 		return nil, err
 	}
+	cm.ctx = cm.conn.ctx
 
 	/*if err = cm.InitializeActuator(nil); err != nil {
 		return nil, err

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"fmt"
 
 	"github.com/appscode/go/crypto/ssh"
 	_env "github.com/appscode/go/env"

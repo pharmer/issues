@@ -4,9 +4,10 @@ import (
 	"context"
 	"sync"
 
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type ClusterManager struct {
@@ -34,7 +35,16 @@ func New(ctx context.Context) Interface {
 	return &ClusterManager{ctx: ctx}
 }
 
+// AddToManager adds all Controllers to the Manager
+func (cm *ClusterManager) AddToManager(ctx context.Context, m manager.Manager) error {
+	return nil
+}
+
 type paramK8sClient struct{}
+
+func (cm *ClusterManager) InitializeMachineActuator(mgr manager.Manager) error {
+	return nil
+}
 
 func (cm *ClusterManager) GetAdminClient() (kubernetes.Interface, error) {
 	cm.m.Lock()

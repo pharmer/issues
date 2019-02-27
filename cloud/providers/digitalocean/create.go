@@ -29,7 +29,7 @@ func (cm *ClusterManager) SetOwner(owner string) {
 	cm.owner = owner
 }
 
-func (cm *ClusterManager) GetDefaultProviderSpec(cluster *api.Cluster, sku string) (clusterapi.ProviderSpec, error) {
+func (cm *ClusterManager) GetDefaultMachineProviderSpec(cluster *api.Cluster, sku string, role api.MachineRole) (clusterapi.ProviderSpec, error) {
 	if sku == "" {
 		sku = "2gb"
 	}

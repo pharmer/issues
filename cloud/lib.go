@@ -98,7 +98,7 @@ func CreateMasterMachines(ctx context.Context, cluster *api.Cluster) (*clusterap
 	if err != nil {
 		return nil, err
 	}
-	providerSpec, err := cm.GetDefaultProviderSpec(cluster, "")
+	providerSpec, err := cm.GetDefaultMachineProviderSpec(cluster, "", api.MasterRole)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func CreateMachineSet(ctx context.Context, cluster *api.Cluster, owner, role, sk
 		return err
 	}
 
-	providerSpec, err := cm.GetDefaultProviderSpec(cluster, sku)
+	providerSpec, err := cm.GetDefaultMachineProviderSpec(cluster, sku, api.NodeRole)
 	if err != nil {
 		return err
 	}

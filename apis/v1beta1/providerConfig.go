@@ -21,6 +21,11 @@ const (
 	EKSProviderGroupName  = "eksproviderconfig"
 	EKSProviderKind       = "EKSProviderConfig"
 	EKSProviderApiVersion = "v1alpha1"
+
+	AzureProviderGroupName   = "azureprovider"
+	AzureProviderMachineKind = "AzureMachineProviderSpec"
+	AzureProviderClusterKind = "AzureClusterProviderSpec"
+	AzureProviderApiVersion  = "v1alpha1"
 )
 
 // DigitalOceanMachineProviderConfig contains Config for DigitalOcean machines.
@@ -227,4 +232,99 @@ func (c *Cluster) SetEKSProviderConfig(cluster *clusterapi.Cluster, config *Clus
 		},
 	}
 	return nil
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AzureClusterProviderSpec is the Schema for the azureclusterproviderspecs API
+// +k8s:openapi-gen=true
+type AzureClusterProviderSpec struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	ResourceGroup string `json:"resourceGroup"`
+	Location      string `json:"location"`
+
+	// CACertificate is a PEM encoded CA Certificate for the control plane nodes.
+	CACertificate []byte `json:"caCertificate,omitempty"`
+
+	// CAPrivateKey is a PEM encoded PKCS1 CA PrivateKey for the control plane nodes.
+	CAPrivateKey []byte `json:"caKey,omitempty"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AzureMachineProviderSpec is the Schema for the azuremachineproviderspecs API
+// +k8s:openapi-gen=true
+type AzureMachineProviderSpec struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Roles         []MachineRole `json:"roles,omitempty"`
+	Location      string        `json:"location"`
+	VMSize        string        `json:"vmSize"`
+	Image         Image         `json:"image"`
+	OSDisk        OSDisk        `json:"osDisk"`
+	SSHPublicKey  string        `json:"sshPublicKey"`
+	SSHPrivateKey string        `json:"sshPrivateKey"`
+}
+
+type Image struct {
+	Publisher string `json:"publisher"`
+	Offer     string `json:"offer"`
+	SKU       string `json:"sku"`
+	Version   string `json:"version"`
+}
+
+type OSDisk struct {
+	OSType      string      `json:"osType"`
+	ManagedDisk ManagedDisk `json:"managedDisk"`
+	DiskSizeGB  int         `json:"diskSizeGB"`
+}
+
+type ManagedDisk struct {
+	StorageAccountType string `json:"storageAccountType"`
+}
+
+
+func (c *Cluster) AzureMachineroviderConfig(raw []byte) (*AzureMachineProviderSpec, error) {
+	providerConfig := &AzureMachineProviderSpec{}
+	if err := json.Unmarshal(raw, providerConfig); err != nil {
+		return nil, err
+	}
+	return providerConfig, nil
+}
+
+func (c *Cluster) SetAzureClusterProviderConfig(cluster *clusterapi.Cluster, config *ClusterConfig) error {
+	conf := &AzureClusterProviderSpec{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: AzureProviderGroupName + "/" + AzureProviderApiVersion,
+			Kind:       AzureProviderClusterKind,
+		},
+		ResourceGroup: config.Cloud.Azure.ResourceGroup,
+		Location: config.Cloud.Zone,
+	}
+
+	bytes, err := json.Marshal(conf)
+	if err != nil {
+		fmt.Println("Unable to marshal provider config: %v", err)
+		return err
+	}
+	cluster.Spec.ProviderSpec = clusterapi.ProviderSpec{
+		Value: &runtime.RawExtension{
+			Raw: bytes,
+		},
+	}
+	return nil
+}
+
+func (c *Cluster) AzureClusterProviderConfig(raw []byte) (*AzureClusterProviderSpec, error)  {
+	providerConfig := &AzureClusterProviderSpec{}
+	if err := json.Unmarshal(raw, providerConfig); err != nil {
+		return nil, err
+	}
+	return providerConfig, nil
+
 }

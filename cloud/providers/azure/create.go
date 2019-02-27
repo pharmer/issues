@@ -1,18 +1,18 @@
 package azure
 
 import (
+	"encoding/json"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/appscode/go/crypto/rand"
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
-	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1alpha3"
+	"k8s.io/apimachinery/pkg/runtime"
+	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 func (cm *ClusterManager) GetDefaultNodeSpec(cluster *api.Cluster, sku string) (api.NodeSpec, error) {
@@ -30,22 +30,64 @@ func (cm *ClusterManager) SetOwner(owner string) {
 	cm.owner = owner
 }
 
-func (cm *ClusterManager) SetDefaults(cluster *api.Cluster) error {
+func (cm *ClusterManager) GetDefaultMachineProviderSpec(cluster *api.Cluster, sku string, role api.MachineRole) (clusterapi.ProviderSpec, error) {
+	spec := &api.AzureMachineProviderSpec{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       api.AzureProviderMachineKind,
+			APIVersion: api.AzureProviderGroupName + "/" + api.AzureProviderApiVersion,
+		},
+		Roles: []api.MachineRole{
+			role,
+		},
+		VMSize:   sku,
+		Location: cluster.Spec.Config.Cloud.Zone,
+		Image: api.Image{
+			Publisher: "Canonical",
+			Offer:     "UbuntuServer",
+			SKU:       "16.04-LTS",
+			Version:   "latest",
+		},
+		OSDisk: api.OSDisk{
+			OSType: "Linux",
+			ManagedDisk: api.ManagedDisk{
+				StorageAccountType: "Premium_LRS",
+			},
+			DiskSizeGB: 30,
+		},
+		SSHPublicKey:  string(SSHKey(cm.ctx).PublicKey),
+		SSHPrivateKey: string(SSHKey(cm.ctx).PrivateKey),
+	}
+	providerSpecValue, err := json.Marshal(spec)
+	if err != nil {
+		return clusterapi.ProviderSpec{}, err
+	}
+
+	return clusterapi.ProviderSpec{
+		Value: &runtime.RawExtension{
+			Raw: providerSpecValue,
+		},
+	}, nil
+}
+
+func (cm *ClusterManager) SetDefaultCluster(cluster *api.Cluster, config *api.ClusterConfig) error {
 	n := namer{cluster: cluster}
 
-	// Init object meta
-	cluster.ObjectMeta.UID = uuid.NewUUID()
-	cluster.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Now()}
-	cluster.ObjectMeta.Generation = time.Now().UnixNano()
-	api.AssignTypeKind(cluster)
+	if err := api.AssignTypeKind(cluster); err != nil {
+		return err
+	}
+	if err := api.AssignTypeKind(cluster.Spec.ClusterAPI); err != nil {
+		return err
+	}
 
 	// Init spec
-	cluster.Spec.Cloud.Region = cluster.Spec.Cloud.Zone
-	cluster.Spec.Cloud.SSHKeyName = n.GenSSHKeyExternalID()
-	cluster.Spec.Networking.NonMasqueradeCIDR = "10.0.0.0/8"
-	cluster.Spec.API.BindPort = kubeadmapi.DefaultAPIBindPort
-	cluster.Spec.APIServerCertSANs = NameGenerator(cm.ctx).ExtraNames(cluster.Name)
-	cluster.Spec.APIServerExtraArgs = map[string]string{
+	config.Cloud.Region = config.Cloud.Zone
+	config.Cloud.SSHKeyName = n.GenSSHKeyExternalID()
+
+	cluster.SetNetworkingDefaults(config.Cloud.NetworkProvider)
+	//config.Cloud..NonMasqueradeCIDR = "10.0.0.0/8"
+	//config.API.BindPort = kubeadmapi.DefaultAPIBindPort
+	config.APIServerCertSANs = NameGenerator(cm.ctx).ExtraNames(cluster.Name)
+	config.APIServerExtraArgs = map[string]string{
 		// ref: https://github.com/kubernetes/kubernetes/blob/d595003e0dc1b94455d1367e96e15ff67fc920fa/cmd/kube-apiserver/app/options/options.go#L99
 		"kubelet-preferred-address-types": strings.Join([]string{
 			string(core.NodeInternalDNS),
@@ -54,17 +96,11 @@ func (cm *ClusterManager) SetDefaults(cluster *api.Cluster) error {
 			string(core.NodeExternalIP),
 		}, ","),
 		"cloud-config":   "/etc/kubernetes/ccm/cloud-config",
-		"cloud-provider": cluster.Spec.Cloud.CloudProvider,
+		"cloud-provider": cluster.Spec.Config.Cloud.CloudProvider,
 	}
-	if cluster.IsMinorVersion("1.9") {
-		cluster.Spec.APIServerExtraArgs["admission-control"] = api.DefaultV19AdmissionControl
-	}
-	cluster.Spec.ControllerManagerExtraArgs = map[string]string{
-		"cloud-config":   "/etc/kubernetes/ccm/cloud-config",
-		"cloud-provider": cluster.Spec.Cloud.CloudProvider,
-	}
-	cluster.Spec.Cloud.CCMCredentialName = cluster.Spec.CredentialName
-	cluster.Spec.Cloud.Azure = &api.AzureSpec{
+
+	config.Cloud.CCMCredentialName = cluster.Spec.Config.CredentialName
+	config.Cloud.Azure = &api.AzureSpec{
 		ResourceGroup:      n.ResourceGroupName(),
 		SubnetName:         n.SubnetName(),
 		SecurityGroupName:  n.NetworkSecurityGroupName(),
@@ -76,10 +112,14 @@ func (cm *ClusterManager) SetDefaults(cluster *api.Cluster) error {
 	}
 
 	// Init status
-	cluster.Status = api.ClusterStatus{
+	cluster.Status = api.PharmerClusterStatus{
 		Phase: api.ClusterPending,
 	}
 
+	return cluster.SetAzureClusterProviderConfig(cluster.Spec.ClusterAPI, config)
+}
+
+func (cm *ClusterManager) SetDefaults(cluster *api.Cluster) error {
 	return nil
 }
 
