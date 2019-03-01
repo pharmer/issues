@@ -1,10 +1,12 @@
-hash: bf52fd94836866881da87f34df238ebd63fd9ddc5f62376a1251d2102ad84b70
-updated: 2019-01-25T15:12:51.42511062+06:00
+hash: 6e97447e5912fb5dbd6742daef39f363dde6a1c5c496944dcb75bd3c340d91da
+updated: 2019-02-28T12:52:04.915090172+06:00
 imports:
 - name: cloud.google.com/go
   version: 74b12019e2aa53ec27882158f59192d7cd6d1998
   subpackages:
   - compute/metadata
+- name: contrib.go.opencensus.io/exporter/ocagent
+  version: 060e6898ab87d943e2ff1090efb927fbc5181cea
 - name: github.com/appscode/go
   version: 52eaa8008e2e5fe8df77ac6fb2fd45e3ea2ae47c
   subpackages:
@@ -86,7 +88,7 @@ imports:
   - service/s3/s3manager
   - service/sts
 - name: github.com/Azure/azure-sdk-for-go
-  version: da91af54816b4cf72949c225a2d0980f51fab01b
+  version: f686bd664dc30c61b628f074d638540d6b87524f
   subpackages:
   - profiles/2017-03-09/resources/mgmt/subscriptions
   - profiles/latest/authorization/mgmt/authorization
@@ -96,6 +98,7 @@ imports:
   - services/authorization/mgmt/2015-07-01/authorization
   - services/compute/mgmt/2017-12-01/compute
   - services/containerservice/mgmt/2017-09-30/containerservice
+  - services/containerservice/mgmt/2018-03-31/containerservice
   - services/graphrbac/1.6/graphrbac
   - services/network/mgmt/2017-09-01/network
   - services/preview/apimanagement/mgmt/2018-06-01-preview/apimanagement
@@ -109,7 +112,7 @@ imports:
   subpackages:
   - winterm
 - name: github.com/Azure/go-autorest
-  version: ea233b6412b0421a65dc6160e16c893364664a95
+  version: f4369d4c79bf40df5e86def1e0f54c7ef261a51c
   subpackages:
   - autorest
   - autorest/adal
@@ -118,13 +121,22 @@ imports:
   - autorest/to
   - autorest/validation
   - logger
-  - version
+  - tracing
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/cenkalti/backoff
   version: 61153c768f31ee5f130071d08fc82b85208528de
+- name: github.com/census-instrumentation/opencensus-proto
+  version: 7f2434bc10da710debe5c4315ed6d4df454b4024
+  subpackages:
+  - gen-go/agent/common/v1
+  - gen-go/agent/metrics/v1
+  - gen-go/agent/trace/v1
+  - gen-go/metrics/v1
+  - gen-go/resource/v1
+  - gen-go/trace/v1
 - name: github.com/chai2010/gettext-go
   version: c6fed771bfd517099caf0f7a961671fa8ed08723
   subpackages:
@@ -183,7 +195,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: 5899d5c5e619fda5fa86e14795a835f473ca284c
 - name: github.com/go-xorm/builder
-  version: dc8bf48f58fab2b4da338ffd25191905fd741b8f
+  version: 03eb88feccce3e477c318ce7f6f1b386544ab20b
 - name: github.com/go-xorm/core
   version: c10e21e7e1cec20e09398f2dfae385e58c8df555
 - name: github.com/go-xorm/xorm
@@ -211,6 +223,7 @@ imports:
   - ptypes/duration
   - ptypes/struct
   - ptypes/timestamp
+  - ptypes/wrappers
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/go-querystring
@@ -326,8 +339,21 @@ imports:
   version: 609b752a95effbbef26d134ac18ed6f57e01b98e
 - name: github.com/moul/gotty-client
   version: c1b82f1af3ebb2febba268415cb1c90686078f80
+- name: github.com/nats-io/go-nats
+  version: f3379e01130f595688283acd70cdb1fff65d9a4d
+  subpackages:
+  - encoders/builtin
+  - util
+- name: github.com/nats-io/go-nats-streaming
+  version: a0e3aee6fce1a77efe4024df3280416e9d99bb98
+  subpackages:
+  - pb
+- name: github.com/nats-io/nkeys
+  version: 1546a3320a8f195a5b5c84aef8309377c2e411d5
+- name: github.com/nats-io/nuid
+  version: 3024a71c3cbe30667286099921591e6fcc328230
 - name: github.com/ncw/swift
-  version: b2a130b7215bd352e6c48f86bb2a2fd42edf577a
+  version: ba19fe35e796969e50f19bd748a770ec5d191ece
 - name: github.com/onsi/ginkgo
   version: fa5fabab2a1bfbd924faf4c067d07ae414e2aedf
   subpackages:
@@ -363,7 +389,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/packethost/packngo
-  version: ac48ed405c2d6480787a1e13712d3c4b058f3784
+  version: caf7bb8cb1044343747215c54e45a01dbb41c8a2
 - name: github.com/pborman/uuid
   version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/peterbourgon/diskv
@@ -438,6 +464,24 @@ imports:
   vcs: git
 - name: github.com/tent/http-link-go
   version: ac974c61c2f990f4115b119354b5e0b47550e888
+- name: go.opencensus.io
+  version: 22a302cdd30bb5e3c0c894c70decd0b53e96eda0
+  subpackages:
+  - exemplar
+  - internal
+  - internal/tagencoding
+  - plugin/ochttp
+  - plugin/ochttp/propagation/b3
+  - plugin/ochttp/propagation/tracecontext
+  - resource
+  - stats
+  - stats/internal
+  - stats/view
+  - tag
+  - trace
+  - trace/internal
+  - trace/propagation
+  - trace/tracestate
 - name: go.uber.org/atomic
   version: 8dc6146f7569370a472715e178d8ae31172ee6da
 - name: go.uber.org/multierr
@@ -472,7 +516,9 @@ imports:
   - http2
   - http2/hpack
   - idna
+  - internal/timeseries
   - lex/httplex
+  - trace
 - name: golang.org/x/oauth2
   version: a6bd8cefa1811bd24b86f8902872e4e8225f74c4
   subpackages:
@@ -484,6 +530,7 @@ imports:
   version: 42b317875d0fa942474b76e1b46a6060d720ae6e
   subpackages:
   - errgroup
+  - semaphore
 - name: golang.org/x/sys
   version: 95c6576299259db960f6c5b9b69ea52422860fce
   subpackages:
@@ -530,6 +577,7 @@ imports:
   - iam/v1
   - replicapoolupdater/v1beta1
   - storage/v1
+  - support/bundler
 - name: google.golang.org/appengine
   version: 4f7eeb5305a4ba1966344836ba4af9996b7b4e05
   subpackages:
@@ -542,8 +590,34 @@ imports:
   - internal/remote_api
   - internal/urlfetch
   - urlfetch
+- name: google.golang.org/genproto
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
+  subpackages:
+  - googleapis/rpc/status
 - name: google.golang.org/grpc
   version: 6b51017f791ae1cfbec89c52efdf444b13b550ef
+  subpackages:
+  - balancer
+  - balancer/base
+  - balancer/roundrobin
+  - codes
+  - connectivity
+  - credentials
+  - encoding
+  - grpclb/grpc_lb_v1/messages
+  - grpclog
+  - internal
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - resolver
+  - resolver/dns
+  - resolver/passthrough
+  - stats
+  - status
+  - tap
+  - transport
 - name: gopkg.in/AlecAivazis/survey.v1
   version: 17861e192dc11fd2f5081df1932c94cce262fa1e
   subpackages:
@@ -882,6 +956,7 @@ imports:
   - pkg/kubectl/cmd/util
   - pkg/kubectl/cmd/util/openapi
   - pkg/kubectl/cmd/util/openapi/validation
+  - pkg/kubectl/describe
   - pkg/kubectl/generated
   - pkg/kubectl/scheme
   - pkg/kubectl/util/i18n
@@ -903,7 +978,7 @@ imports:
   - exec/testing
   - pointer
 - name: sigs.k8s.io/cluster-api
-  version: 76653f4302ca4eb3fb853540bf041f416849a2d9
+  version: c077c33e153abdff6b173d58bd548d059864e9c5
   subpackages:
   - cmd/clusterctl/clientcmd
   - cmd/clusterctl/clusterdeployer/bootstrap
@@ -911,6 +986,7 @@ imports:
   - cmd/clusterctl/clusterdeployer/bootstrap/kind
   - cmd/clusterctl/clusterdeployer/bootstrap/minikube
   - cmd/clusterctl/clusterdeployer/clusterclient
+  - cmd/clusterctl/clusterdeployer/provider
   - cmd/clusterctl/phases
   - pkg/apis
   - pkg/apis/cluster/common
@@ -958,6 +1034,10 @@ imports:
 - name: sigs.k8s.io/yaml
   version: fd68e9863619f6ec2fdd8625fe1f02e7c877e480
 testImports:
+- name: code.gitea.io/sdk
+  version: 9c4f6485997bcff568e30cfe45165018ac5772c1
+  subpackages:
+  - gitea
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:

@@ -288,7 +288,6 @@ type ManagedDisk struct {
 	StorageAccountType string `json:"storageAccountType"`
 }
 
-
 func (c *Cluster) AzureMachineroviderConfig(raw []byte) (*AzureMachineProviderSpec, error) {
 	providerConfig := &AzureMachineProviderSpec{}
 	if err := json.Unmarshal(raw, providerConfig); err != nil {
@@ -304,7 +303,7 @@ func (c *Cluster) SetAzureClusterProviderConfig(cluster *clusterapi.Cluster, con
 			Kind:       AzureProviderClusterKind,
 		},
 		ResourceGroup: config.Cloud.Azure.ResourceGroup,
-		Location: config.Cloud.Zone,
+		Location:      config.Cloud.Zone,
 	}
 
 	bytes, err := json.Marshal(conf)
@@ -320,7 +319,7 @@ func (c *Cluster) SetAzureClusterProviderConfig(cluster *clusterapi.Cluster, con
 	return nil
 }
 
-func (c *Cluster) AzureClusterProviderConfig(raw []byte) (*AzureClusterProviderSpec, error)  {
+func (c *Cluster) AzureClusterProviderConfig(raw []byte) (*AzureClusterProviderSpec, error) {
 	providerConfig := &AzureClusterProviderSpec{}
 	if err := json.Unmarshal(raw, providerConfig); err != nil {
 		return nil, err

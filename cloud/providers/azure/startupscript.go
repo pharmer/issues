@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"sigs.k8s.io/cluster-api/pkg/util"
 
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
@@ -15,6 +14,7 @@ import (
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta1"
 	"k8s.io/kubernetes/cmd/kubeadm/app/util/pubkeypin"
 	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
+	"sigs.k8s.io/cluster-api/pkg/util"
 )
 
 func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clusterapi.Machine, owner, token string) TemplateData {
@@ -86,8 +86,8 @@ func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clu
 	return td
 }
 
-func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine  *clusterapi.Machine, owner string) TemplateData {
-	td := newNodeTemplateData(ctx, cluster, machine , owner, "")
+func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *clusterapi.Machine, owner string) TemplateData {
+	td := newNodeTemplateData(ctx, cluster, machine, owner, "")
 	td.KubeletExtraArgs["node-labels"] = api.NodeLabels{
 		api.NodePoolKey: machine.Name,
 	}.String()
@@ -99,7 +99,7 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine  *
 	}
 	ifg := kubeadmapi.InitConfiguration{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "kubeadm.k8s.io/v1alpha3",
+			APIVersion: "kubeadm.k8s.io/v1beta1",
 			Kind:       "InitConfiguration",
 		},
 
@@ -108,19 +108,31 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine  *
 		},
 		LocalAPIEndpoint: kubeadmapi.APIEndpoint{
 			//AdvertiseAddress: cluster.Spec.API.AdvertiseAddress,
-			BindPort: 6443,//         cluster.Spec.API.BindPort,
+			BindPort: 6443, //         cluster.Spec.API.BindPort,
 		},
 	}
 	td.InitConfiguration = &ifg
 
 	cfg := kubeadmapi.ClusterConfiguration{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "kubeadm.k8s.io/v1alpha3",
+			APIVersion: "kubeadm.k8s.io/v1beta1",
 			Kind:       "ClusterConfiguration",
 		},
+		APIServer: kubeadmapi.APIServer{
+			ControlPlaneComponent: kubeadmapi.ControlPlaneComponent{
+				ExtraVolumes: []kubeadmapi.HostPathMount{hostPath},
+				ExtraArgs:    cluster.Spec.Config.APIServerExtraArgs,
+			},
+			CertSANs: cluster.Spec.Config.APIServerCertSANs,
+		},
+		ControllerManager: kubeadmapi.ControlPlaneComponent{
+			ExtraVolumes: []kubeadmapi.HostPathMount{hostPath},
+			ExtraArgs:    cluster.Spec.Config.ControllerManagerExtraArgs,
+		},
+		Scheduler: kubeadmapi.ControlPlaneComponent{
+			ExtraArgs: cluster.Spec.Config.SchedulerExtraArgs,
+		},
 
-		APIServerExtraVolumes:         []kubeadmapi.HostPathMount{hostPath},
-		ControllerManagerExtraVolumes: []kubeadmapi.HostPathMount{hostPath},
 		Networking: kubeadmapi.Networking{
 			ServiceSubnet: cluster.Spec.ClusterAPI.Spec.ClusterNetwork.Services.CIDRBlocks[0],
 			PodSubnet:     cluster.Spec.ClusterAPI.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
@@ -128,10 +140,7 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine  *
 		},
 		KubernetesVersion: cluster.Spec.Config.KubernetesVersion,
 		//CloudProvider:              cluster.Spec.Cloud.CloudProvider,
-		APIServerExtraArgs:         cluster.Spec.APIServerExtraArgs,
-		ControllerManagerExtraArgs: cluster.Spec.ControllerManagerExtraArgs,
-		SchedulerExtraArgs:         cluster.Spec.SchedulerExtraArgs,
-		APIServerCertSANs:          cluster.Spec.APIServerCertSANs,
+
 	}
 
 	td.ClusterConfiguration = &cfg
@@ -168,7 +177,7 @@ func (conn *cloudConnector) renderStartupScript(cluster *api.Cluster, machine *c
 	}
 
 	var script bytes.Buffer
-	if util.IsControlPlaneMachine(machine){
+	if util.IsControlPlaneMachine(machine) {
 		if err := tpl.ExecuteTemplate(&script, api.RoleMaster, newMasterTemplateData(conn.ctx, conn.cluster, machine, owner)); err != nil {
 			return "", err
 		}

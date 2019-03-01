@@ -1,9 +1,9 @@
 package: github.com/pharmer/pharmer
 import:
 - package: github.com/Azure/azure-sdk-for-go
-  version: v21.3.0
+  version: v26.1.0
 - package: github.com/Azure/go-autorest
-  version: v11.1.0
+  version: v11.5.0
 - package: github.com/JamesClonk/vultr
   version: 1.15.0
 - package: github.com/appscode/go-dns
@@ -121,6 +121,8 @@ import:
   version: v0.1.9
 - package: github.com/prometheus/client_golang
   version: v0.9.2
+- package: github.com/census-instrumentation/opencensus-proto
+  version: v0.1.0
 testImport:
 - package: github.com/stretchr/testify
   version: v1.1.4

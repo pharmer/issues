@@ -6,8 +6,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
 	armstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2017-10-01/storage"
-	ptr "github.com/appscode/go-ptr"
 	. "github.com/appscode/go/context"
+
 	//. "github.com/appscode/go/types"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
@@ -15,6 +15,7 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
 	//kubeadmconsts "k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
@@ -38,7 +39,7 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	cm.conn.namer = cm.namer
 
 	// Common stuff
-/*	if err = cm.conn.detectUbuntuImage(); err != nil {
+	/*	if err = cm.conn.detectUbuntuImage(); err != nil {
 		return nil, errors.Wrap(err, ID(cm.ctx))
 	}*/
 
@@ -73,8 +74,9 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 		if err != nil {
 			return nil, err
 		}
+		replica := int32(0)
 		for _, ng := range nodeGroups {
-			ng.Spec.Replicas = ptr.Int32P(int32(0))
+			ng.Spec.Replicas = &replica
 			_, err := Store(cm.ctx).Owner(cm.owner).MachineSet(cm.cluster.Name).Update(ng)
 			if err != nil {
 				return nil, err
@@ -352,7 +354,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		if !dryRun {
 
 			var script string
-			if script, err = cm.conn.renderStartupScript(masterMachine, cm.owner, ""); err != nil {
+			if script, err = cm.conn.renderStartupScript(cm.cluster, masterMachine, cm.owner, ""); err != nil {
 				return
 			}
 
@@ -366,13 +368,13 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			}
 			if masterInstance.PublicIP != "" {
 				nodeAddress = append(nodeAddress, core.NodeAddress{
-					Type: core.NodeExternalIP,
+					Type:    core.NodeExternalIP,
 					Address: masterInstance.PublicIP,
 				})
 			}
 			if masterInstance.PrivateIP != "" {
 				nodeAddress = append(nodeAddress, core.NodeAddress{
-					Type: core.NodeInternalIP,
+					Type:    core.NodeInternalIP,
 					Address: masterInstance.PrivateIP,
 				})
 			}

@@ -612,7 +612,7 @@ func (conn *cloudConnector) createVirtualMachine(nic network.Interface, as compu
 	if err != nil {
 		return compute.VirtualMachine{}, err
 	}
-	Logger(conn.ctx).Infof("Virtual machine with disk %v password %v created", conn.namer.BootDiskURI(sa, vmName), conn.cluster.Spec.Cloud.Azure.RootPassword)
+	Logger(conn.ctx).Infof("Virtual machine with disk %v password %v created", conn.namer.BootDiskURI(sa, vmName), conn.cluster.Spec.Config.Cloud.Azure.RootPassword)
 	// https://docs.microsoft.com/en-us/azure/virtual-machines/virtual-machines-linux-extensions-customscript?toc=%2fazure%2fvirtual-machines%2flinux%2ftoc.json
 	// https://github.com/Azure/custom-script-extension-linux
 	// old: https://github.com/Azure/azure-linux-extensions/tree/master/CustomScript
@@ -713,7 +713,7 @@ func (conn *cloudConnector) StartNode(nodeName, token string, as compute.Availab
 		return ki, errors.Wrap(err, ID(conn.ctx))
 	}
 
-	script, err := conn.renderStartupScript(ng, conn.owner, token)
+	script, err := conn.renderStartupScript(conn.cluster, machine, conn.owner, token)
 	if err != nil {
 		return ki, err
 	}
