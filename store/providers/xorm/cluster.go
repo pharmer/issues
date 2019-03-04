@@ -22,7 +22,7 @@ func (s *clusterXormStore) List(opts metav1.ListOptions) ([]*api.Cluster, error)
 	result := make([]*api.Cluster, 0)
 	var clusters []Cluster
 
-	err := s.engine.Where(`"ownerId"=?`, s.owner).Find(&clusters)
+	err := s.engine.Where(`"owner_id"=?`, s.owner).Find(&clusters)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +155,6 @@ func (s *clusterXormStore) UpdateStatus(obj *api.Cluster) (*api.Cluster, error) 
 	if err != nil {
 		return nil, err
 	}
-	_, err = s.engine.Where(`name = ?`, obj.Name).Where(`"ownerId"=?`, s.owner).Update(updated)
+	_, err = s.engine.Where(`name = ?`, obj.Name).Where(`"owner_id"=?`, s.owner).Update(updated)
 	return existing, err
 }

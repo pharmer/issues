@@ -31,6 +31,7 @@ type PharmerClusterSpec struct {
 	ClusterAPI *clusterapi.Cluster `json:"clusterApi,omitempty" protobuf:"bytes,1,opt,name=clusterApi"`
 	Config     *ClusterConfig      `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
 }
+
 type ClusterConfig struct {
 	Cloud                CloudSpec `json:"cloud" protobuf:"bytes,1,opt,name=cloud"`
 	KubernetesVersion    string    `json:"kubernetesVersion,omitempty" protobuf:"bytes,4,opt,name=kubernetesVersion"`
@@ -220,5 +221,13 @@ func (c *Cluster) SetNetworkingDefaults(provider string) {
 			podSubnet = "10.244.0.0/16"
 		}
 		clusterSpec.ClusterNetwork.Pods.CIDRBlocks = []string{podSubnet}
+	}
+}
+
+func (c *Cluster) InitClusterApi() {
+	c.Spec.ClusterAPI = &clusterapi.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: c.Name,
+		},
 	}
 }

@@ -69,7 +69,7 @@ func (conn *cloudConnector) IsUnauthorized() (bool, string) {
 func PrepareCloud(ctx context.Context, clusterName, owner string) (*cloudConnector, error) {
 	var err error
 	var conn *cloudConnector
-	cluster, err := Store(ctx).Clusters().Get(clusterName)
+	cluster, err := Store(ctx).Owner(owner).Clusters().Get(clusterName)
 	if err != nil {
 		return conn, fmt.Errorf("cluster `%s` does not exist. Reason: %v", clusterName, err)
 	}

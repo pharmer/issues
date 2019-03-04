@@ -66,9 +66,8 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *c
 		NodeRegistration: kubeadmapi.NodeRegistrationOptions{
 			KubeletExtraArgs: td.KubeletExtraArgs,
 		},
-
 		LocalAPIEndpoint: kubeadmapi.APIEndpoint{
-			//AdvertiseAddress: cluster.Spec.API.AdvertiseAddress,
+			//AdvertiseAddress: machine.Status,
 			BindPort: 6443, //        cluster.Spec.API.BindPort,
 		},
 	}

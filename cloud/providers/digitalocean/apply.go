@@ -202,7 +202,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		})
 	}
 
-	if cm.cluster, err = Store(cm.ctx).Clusters().Update(cm.cluster); err != nil {
+	if cm.cluster, err = Store(cm.ctx).Owner(cm.owner).Clusters().Update(cm.cluster); err != nil {
 		return
 	}
 
@@ -218,7 +218,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 
 	// needed to get master_internal_ip
 	cm.cluster.Status.Phase = api.ClusterReady
-	if _, err = Store(cm.ctx).Clusters().UpdateStatus(cm.cluster); err != nil {
+	if _, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster); err != nil {
 		return
 	}
 
@@ -227,7 +227,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		return
 	}
 
-	ca, err := NewClusterApi(cm.ctx, cm.cluster, "cloud-provider-system", kc)
+	ca, err := NewClusterApi(cm.ctx, cm.cluster, cm.owner, "cloud-provider-system", kc)
 	if err != nil {
 		return acts, err
 	}
@@ -404,7 +404,7 @@ func (cm *ClusterManager) applyUpgrade(dryRun bool) (acts []api.Action, err erro
 
 	var masterMachine *clusterv1.Machine
 	masterName := fmt.Sprintf("%v-master", cm.cluster.Name)
-	masterMachine, err = Store(cm.ctx).Machine(cm.cluster.Name).Get(masterName)
+	masterMachine, err = Store(cm.ctx).Owner(cm.owner).Machine(cm.cluster.Name).Get(masterName)
 	if err != nil {
 		return nil, err
 	}
