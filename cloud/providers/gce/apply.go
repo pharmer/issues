@@ -48,7 +48,7 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 			return nil, err
 		} else if upgrade {
 			cm.cluster.Status.Phase = api.ClusterUpgrading
-			Store(cm.ctx).Clusters().UpdateStatus(cm.cluster)
+			Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster)
 			return cm.applyUpgrade(dryRun)
 		}
 	}
@@ -242,7 +242,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 	}
 
 	// needed for master start-up config
-	if _, err = Store(cm.ctx).Clusters().UpdateStatus(cm.cluster); err != nil {
+	if _, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster); err != nil {
 		cm.cluster.Status.Reason = err.Error()
 		err = errors.Wrap(err, ID(cm.ctx))
 		return
@@ -303,7 +303,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			// -------------------------------------------------------------------------------------------------------------
 			// needed to get master_internal_ip
 			cm.cluster.Status.Phase = api.ClusterReady
-			if _, err = Store(cm.ctx).Clusters().UpdateStatus(cm.cluster); err != nil {
+			if _, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster); err != nil {
 				return
 			}
 		}
@@ -341,7 +341,7 @@ func (cm *ClusterManager) applyScale(dryRun bool) (acts []api.Action, err error)
 	}
 
 	// needed for node start-up config to get master_internal_ip
-	if _, err = Store(cm.ctx).Clusters().UpdateStatus(cm.cluster); err != nil {
+	if _, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster); err != nil {
 		cm.cluster.Status.Reason = err.Error()
 		err = errors.Wrap(err, ID(cm.ctx))
 		return
@@ -382,8 +382,8 @@ func (cm *ClusterManager) applyScale(dryRun bool) (acts []api.Action, err error)
 		acts = append(acts, a2...)
 	}
 
-	Store(cm.ctx).Clusters().UpdateStatus(cm.cluster)
-	Store(cm.ctx).Clusters().Update(cm.cluster)
+	Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster)
+	Store(cm.ctx).Owner(cm.owner).Clusters().Update(cm.cluster)
 
 	return
 }
@@ -392,7 +392,7 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 	if cm.cluster.Status.Phase == api.ClusterReady {
 		cm.cluster.Status.Phase = api.ClusterDeleting
 	}
-	_, err = Store(cm.ctx).Clusters().UpdateStatus(cm.cluster)
+	_, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster)
 	if err != nil {
 		return
 	}
@@ -478,7 +478,7 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 
 	if !dryRun {
 		cm.cluster.Status.Phase = api.ClusterDeleted
-		Store(cm.ctx).Clusters().Update(cm.cluster)
+		Store(cm.ctx).Owner(cm.owner).Clusters().Update(cm.cluster)
 	}
 
 	return
@@ -510,7 +510,7 @@ func (cm *ClusterManager) applyUpgrade(dryRun bool) (acts []api.Action, err erro
 		if token, err = GetExistingKubeadmToken(kc, api.TokenDuration_10yr); err != nil {
 			return
 		}
-		if cm.cluster, err = Store(cm.ctx).Clusters().Update(cm.cluster); err != nil {
+		if cm.cluster, err = Store(cm.ctx).Owner(cm.owner).Clusters().Update(cm.cluster); err != nil {
 			return
 		}
 	}
@@ -532,7 +532,7 @@ func (cm *ClusterManager) applyUpgrade(dryRun bool) (acts []api.Action, err erro
 
 	if !dryRun {
 		cm.cluster.Status.Phase = api.ClusterReady
-		if _, err = Store(cm.ctx).Clusters().UpdateStatus(cm.cluster); err != nil {
+		if _, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster); err != nil {
 			return
 		}
 	}

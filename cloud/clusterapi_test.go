@@ -24,7 +24,7 @@ func TestCreateApiserver(t *testing.T) {
 	}
 	ctx := NewContext(context.Background(), cfg, _env.Dev)
 
-	cluster, err := Store(ctx).Clusters().Get("doc6")
+	cluster, err := Store(ctx).Owner(owner).Clusters().Get("doc6")
 	fmt.Println(err)
 
 	if ctx, err = LoadCACertificates(ctx, cluster); err != nil {

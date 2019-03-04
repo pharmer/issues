@@ -84,12 +84,12 @@ func Create(ctx context.Context, cluster *api.Cluster, owner string) (*api.Clust
 		if err != nil {
 			return nil, err
 		}
-		if _, err = Store(ctx).Machine(cluster.Name).Create(master); err != nil {
+		if _, err = Store(ctx).Owner(owner).Machine(cluster.Name).Create(master); err != nil {
 			return nil, err
 		}
 	}
 
-	return Store(ctx).Clusters().Update(cluster)
+	return Store(ctx).Owner(owner).Clusters().Update(cluster)
 
 }
 
@@ -222,14 +222,14 @@ func DeleteNG(ctx context.Context, clusterName, nodeGroupName string, owner stri
 
 	//	if !nodeGroup.IsMaster() {
 	//		nodeGroup.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-	_, err = Store(ctx).NodeGroups(clusterName).Update(nodeGroup)
+	_, err = Store(ctx).Owner(owner).NodeGroups(clusterName).Update(nodeGroup)
 	return err
 	//	}
 
 	return nil
 }
 
-func DeleteMachineSet(ctx context.Context, clusterName, setName string) error {
+func DeleteMachineSet(ctx context.Context, clusterName, setName, owner string) error {
 	if clusterName == "" {
 		return errors.New("missing cluster name")
 	}
@@ -237,13 +237,13 @@ func DeleteMachineSet(ctx context.Context, clusterName, setName string) error {
 		return errors.New("missing machineset name")
 	}
 
-	mSet, err := Store(ctx).MachineSet(clusterName).Get(setName)
+	mSet, err := Store(ctx).Owner(owner).MachineSet(clusterName).Get(setName)
 	if err != nil {
 		return errors.Errorf(`machinset not found in pharmer db, try using kubectl`)
 	}
 	tm := metav1.Now()
 	mSet.DeletionTimestamp = &tm
-	_, err = Store(ctx).MachineSet(clusterName).Update(mSet)
+	_, err = Store(ctx).Owner(owner).MachineSet(clusterName).Update(mSet)
 	return err
 }
 

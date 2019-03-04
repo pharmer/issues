@@ -37,16 +37,17 @@ type ipAddressCommon struct {
 	Management    bool   `json:"management"`
 	Manageable    bool   `json:"manageable"`
 	Project       Href   `json:"project"`
+	Global        *bool  `json:"global_ip"`
 }
 
 // IPAddressReservation is created when user sends IP reservation request for a project (considering it's within quota).
 type IPAddressReservation struct {
 	ipAddressCommon
-	Assignments []Href   `json:"assignments"`
-	Facility    Facility `json:"facility,omitempty"`
-	Available   string   `json:"available"`
-	Addon       bool     `json:"addon"`
-	Bill        bool     `json:"bill"`
+	Assignments []Href    `json:"assignments"`
+	Facility    *Facility `json:"facility,omitempty"`
+	Available   string    `json:"available"`
+	Addon       bool      `json:"addon"`
+	Bill        bool      `json:"bill"`
 }
 
 // AvailableResponse is a type for listing of available addresses from a reserved block.
@@ -67,10 +68,10 @@ type IPAddressAssignment struct {
 
 // IPReservationRequest represents the body of a reservation request.
 type IPReservationRequest struct {
-	Type     string `json:"type"`
-	Quantity int    `json:"quantity"`
-	Comments string `json:"comments"`
-	Facility string `json:"facility"`
+	Type     string  `json:"type"`
+	Quantity int     `json:"quantity"`
+	Comments string  `json:"comments"`
+	Facility *string `json:"facility,omitempty"`
 }
 
 // AddressStruct is a helper type for request/response with dict like {"address": ... }

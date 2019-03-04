@@ -161,7 +161,7 @@ func (do *MachineActuator) validateMachine(providerConfig *api.DigitalOceanMachi
 
 func (do *MachineActuator) getKubeadmToken() (string, error) {
 	tokenParams := kubeadm.TokenCreateParams{
-		Ttl: time.Duration(30) * time.Minute,
+		TTL: time.Duration(30) * time.Minute,
 	}
 
 	token, err := do.kubeadm.TokenCreate(tokenParams)
