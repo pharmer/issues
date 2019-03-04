@@ -453,6 +453,18 @@ message NodeSpec {
 message NullNameGenerator {
 }
 
+message Operation {
+  optional int64 iD = 1 [(gogoproto.customname) = "ID", (gogoproto.nullable) = false];
+
+  optional int64 userID = 2 [(gogoproto.customname) = "UserID", (gogoproto.nullable) = false];
+
+  optional int64 clusterID = 3 [(gogoproto.customname) = "ClusterID", (gogoproto.nullable) = false];
+
+  optional string code = 4 [(gogoproto.customname) = "Code", (gogoproto.nullable) = false];
+
+  optional int64 state = 5 [(gogoproto.casttype) = "OperationState", (gogoproto.customname) = "State", (gogoproto.nullable) = false];
+}
+
 message PharmerClusterSpec {
   optional Cluster clusterApi = 1 [(gogoproto.customname) = "ClusterAPI"];
 
@@ -476,7 +488,7 @@ message PharmerConfig {
 }
 
 message PostgresSpec {
-  optional string dbName = 1 [(gogoproto.customname) = "DbName", (gogoproto.nullable) = false];
+  optional string database = 1 [(gogoproto.customname) = "DbName", (gogoproto.nullable) = false];
 
   optional string host = 2 [(gogoproto.customname) = "Host", (gogoproto.nullable) = false];
 

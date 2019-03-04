@@ -28,6 +28,8 @@ type ClusterApi struct {
 	client    client.Client
 
 	bootstrapClient clusterclient.Client
+
+	Owner string
 }
 
 type ApiServerTemplate struct {
@@ -35,15 +37,16 @@ type ApiServerTemplate struct {
 	Provider            string
 	ControllerNamespace string
 	ControllerImage     string
+	ClusterOwner        string
 }
 
-var machineControllerImage = "pharmer/machine-controller:clusterapi"
+var machineControllerImage = "pharmer/machine-controller:platform"
 
 const (
 	BasePath = ".pharmer/config.d"
 )
 
-func NewClusterApi(ctx context.Context, cluster *api.Cluster, namespace string, kc kubernetes.Interface) (*ClusterApi, error) {
+func NewClusterApi(ctx context.Context, cluster *api.Cluster, owner, namespace string, kc kubernetes.Interface) (*ClusterApi, error) {
 	var token string
 	var err error
 	if token, err = GetExistingKubeadmToken(kc, kubeadmconsts.DefaultTokenDuration); err != nil {
@@ -55,7 +58,7 @@ func NewClusterApi(ctx context.Context, cluster *api.Cluster, namespace string, 
 		return nil, err
 	}
 
-	return &ClusterApi{ctx: ctx, cluster: cluster, namespace: namespace, kc: kc, token: token, bootstrapClient: bc}, nil
+	return &ClusterApi{ctx: ctx, cluster: cluster, Owner: owner, namespace: namespace, kc: kc, token: token, bootstrapClient: bc}, nil
 }
 
 func (ca *ClusterApi) Apply() error {
@@ -72,7 +75,7 @@ func (ca *ClusterApi) Apply() error {
 	if namespace == "" {
 		namespace = ca.bootstrapClient.GetContextNamespace()
 	}
-	machines, err := Store(ca.ctx).Machine(ca.cluster.Name).List(metav1.ListOptions{})
+	machines, err := Store(ca.ctx).Owner(ca.Owner).Machine(ca.cluster.Name).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -109,7 +112,7 @@ func (ca *ClusterApi) CreateMachineController() error {
 func (ca *ClusterApi) CreatePharmerSecret() error {
 	providerConfig := ca.cluster.ClusterConfig()
 
-	cred, err := Store(ca.ctx).Credentials().Get(ca.cluster.ClusterConfig().CredentialName)
+	cred, err := Store(ca.ctx).Owner(ca.Owner).Credentials().Get(ca.cluster.ClusterConfig().CredentialName)
 	if err != nil {
 		return err
 	}
@@ -137,7 +140,7 @@ func (ca *ClusterApi) CreatePharmerSecret() error {
 		return err
 	}
 
-	publicKey, privateKey, err := Store(ca.ctx).SSHKeys(ca.cluster.Name).Get(ca.cluster.ClusterConfig().Cloud.SSHKeyName)
+	publicKey, privateKey, err := Store(ca.ctx).Owner(ca.Owner).SSHKeys(ca.cluster.Name).Get(ca.cluster.ClusterConfig().Cloud.SSHKeyName)
 	if err != nil {
 		return err
 	}
@@ -180,6 +183,7 @@ func (ca *ClusterApi) CreateApiServerAndController() error {
 		Provider:            ca.cluster.ClusterConfig().Cloud.CloudProvider,
 		ControllerNamespace: ca.namespace,
 		ControllerImage:     machineControllerImage,
+		ClusterOwner:        ca.Owner,
 	})
 	if err != nil {
 		return err
@@ -239,6 +243,7 @@ spec:
         - controller
         - --provider={{ .Provider }}
         - --kubeconfig=/etc/kubernetes/admin.conf 
+        - --owner={{ .ClusterOwner }}
         env:
         image: {{ .ControllerImage }}
         name: manager
@@ -255,13 +260,13 @@ spec:
         - mountPath: /etc/ssl/certs
           name: certs
         - name: sshkeys
-          mountPath: /root/.pharmer/store.d/clusters/{{ .ClusterName }}/ssh
+          mountPath: /root/.pharmer/store.d/{{ .ClusterOwner }}/clusters/{{ .ClusterName }}/ssh
         - name: certificates
-          mountPath: /root/.pharmer/store.d/clusters/{{ .ClusterName }}/pki
+          mountPath: /root/.pharmer/store.d/{{ .ClusterOwner }}/clusters/{{ .ClusterName }}/pki
         - name: cluster
-          mountPath: /root/.pharmer/store.d/clusters
+          mountPath: /root/.pharmer/store.d/{{ .ClusterOwner }}/clusters
         - name: credential
-          mountPath: /root/.pharmer/store.d/credentials
+          mountPath: /root/.pharmer/store.d/{{ .ClusterOwner }}/credentials
       terminationGracePeriodSeconds: 10
       tolerations:
       - effect: NoSchedule

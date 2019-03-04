@@ -21,6 +21,7 @@ type Interface interface {
 type ResourceInterface interface {
 	Credentials() CredentialStore
 
+	Operations() OperationStore
 	Clusters() ClusterStore
 	NodeGroups(cluster string) NodeGroupStore
 	Machine(cluster string) MachineStore
@@ -35,6 +36,11 @@ type CredentialStore interface {
 	Create(obj *apiv1.Credential) (*apiv1.Credential, error)
 	Update(obj *apiv1.Credential) (*apiv1.Credential, error)
 	Delete(name string) error
+}
+
+type OperationStore interface {
+	Get(id string) (*apiv1.Operation, error)
+	Update(obj *apiv1.Operation) (*apiv1.Operation, error)
 }
 
 type ClusterStore interface {

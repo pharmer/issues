@@ -16,6 +16,7 @@ import (
 
 func newCmdController() *cobra.Command {
 	//s := config.
+	ownerID := ""
 	machineSetupConfig := "/etc/machinesetup/machine_setup_configs.yaml"
 	provider := "digitalocean"
 	cmd := &cobra.Command{
@@ -48,6 +49,7 @@ func newCmdController() *cobra.Command {
 			if err := clusterapis.AddToScheme(mgr.GetScheme()); err != nil {
 				term.Fatalln(err)
 			}
+			cm.SetOwner(ownerID)
 
 			if err := cm.AddToManager(ctx, mgr); err != nil {
 				term.Fatalln(err)
@@ -61,5 +63,7 @@ func newCmdController() *cobra.Command {
 	//s.AddFlags(cmd.Flags())
 	cmd.Flags().StringVar(&machineSetupConfig, "machine-setup-config", machineSetupConfig, "path to the machine setup config")
 	cmd.Flags().StringVar(&provider, "provider", provider, "Cloud provider name")
+	cmd.Flags().StringVarP(&ownerID, "owner", "o", ownerID, "Current user id")
+
 	return cmd
 }

@@ -31,6 +31,8 @@ type FakeStore struct {
 	certificates map[string]store.CertificateStore
 	sshKeys      map[string]store.SSHKeyStore
 
+	operations store.OperationStore
+
 	owner string
 
 	mux sync.Mutex
@@ -45,6 +47,7 @@ func New() store.Interface {
 		machine:      map[string]store.MachineStore{},
 		certificates: map[string]store.CertificateStore{},
 		sshKeys:      map[string]store.SSHKeyStore{},
+		//operations:   store.OperationStore{},
 	}
 }
 
@@ -121,4 +124,13 @@ func (s *FakeStore) SSHKeys(cluster string) store.SSHKeyStore {
 		s.sshKeys[cluster] = &sshKeyFileStore{container: map[string][]byte{}, cluster: cluster}
 	}
 	return s.sshKeys[cluster]
+}
+
+func (s *FakeStore) Operations() store.OperationStore {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	s.operations = &operationFileStore{container: map[string][]byte{}}
+
+	return s.operations
 }
