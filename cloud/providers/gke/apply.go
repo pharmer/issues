@@ -3,12 +3,13 @@ package gke
 import (
 	"fmt"
 
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
 	container "google.golang.org/api/container/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, error) {
@@ -29,7 +30,7 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	/*if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster); err != nil {
 		return nil, err
 	}*/
-	if cm.conn, err = NewConnector(cm.ctx, cm.cluster); err != nil {
+	if cm.conn, err = NewConnector(cm.ctx, cm.cluster, cm.owner); err != nil {
 		return nil, err
 	}
 
@@ -81,8 +82,8 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		Message:  fmt.Sprintf("Kubernetes cluster with name %v will be created", cm.cluster.Name),
 	})
 	var cluster *container.Cluster
-
-	cluster, _ = cm.conn.containerService.Projects.Zones.Clusters.Get(cm.conn.cluster.Spec.Cloud.Project, cm.conn.cluster.Spec.Cloud.Zone, cm.cluster.Name).Do()
+	config := cm.conn.cluster.Spec.Config
+	cluster, _ = cm.conn.containerService.Projects.Zones.Clusters.Get(config.Cloud.Project, config.Cloud.Zone, cm.cluster.Name).Do()
 	if cluster == nil && !dryRun {
 		if cluster, err = encodeCluster(cm.ctx, cm.cluster, cm.owner); err != nil {
 			return acts, err
@@ -97,12 +98,17 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			return acts, err
 		}
 
-		cluster, err = cm.conn.containerService.Projects.Zones.Clusters.Get(cm.conn.cluster.Spec.Cloud.Project, cm.conn.cluster.Spec.Cloud.Zone, cm.cluster.Name).Do()
+		cluster, err = cm.conn.containerService.Projects.Zones.Clusters.Get(config.Cloud.Project, config.Cloud.Zone, cm.cluster.Name).Do()
 		if err != nil {
 			return acts, err
 		}
-		cm.retrieveClusterStatus(cluster)
-		err = cm.StoreCertificate(cluster)
+		if err = cm.retrieveClusterStatus(cluster); err != nil {
+			return
+		}
+		if cm.cluster, err = Store(cm.ctx).Owner(cm.owner).Clusters().Update(cm.cluster); err != nil {
+			return
+		}
+		err = cm.StoreCertificate(cluster, cm.owner)
 		if err != nil {
 			return acts, err
 		}
@@ -128,8 +134,8 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 }
 
 func (cm *ClusterManager) applyScale(dryRun bool) (acts []api.Action, err error) {
-	var nodeGroups []*api.NodeGroup
-	nodeGroups, err = Store(cm.ctx).Owner(cm.owner).NodeGroups(cm.cluster.Name).List(metav1.ListOptions{})
+	var nodeGroups []*clusterapi.MachineSet
+	nodeGroups, err = Store(cm.ctx).Owner(cm.owner).MachineSet(cm.cluster.Name).List(metav1.ListOptions{})
 	if err != nil {
 		return
 	}

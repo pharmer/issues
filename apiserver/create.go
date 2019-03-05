@@ -50,7 +50,6 @@ func (a *Apiserver) CreateCluster() error {
 
 			cluster.InitClusterApi()
 
-
 			noti := notification.NewNotifier(a.ctx, a.natsConn, strconv.Itoa(int(obj.ClusterID)))
 			newCtx := WithLogger(a.ctx, noti)
 
@@ -59,7 +58,6 @@ func (a *Apiserver) CreateCluster() error {
 			if err != nil {
 				glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
 			}
-
 
 			ApplyCluster(newCtx, &opts.ApplyConfig{
 				ClusterName: cluster.Name, //strconv.Itoa(int(obj.ClusterID)),

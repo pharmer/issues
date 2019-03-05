@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"sync"
 
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/cert"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
@@ -43,7 +44,16 @@ func New(ctx context.Context) Interface {
 	return &ClusterManager{ctx: ctx}
 }
 
+// AddToManager adds all Controllers to the Manager
+func (cm *ClusterManager) AddToManager(ctx context.Context, m manager.Manager) error {
+	return nil
+}
+
 type paramK8sClient struct{}
+
+func (cm *ClusterManager) InitializeMachineActuator(mgr manager.Manager) error {
+	return nil
+}
 
 func (cm *ClusterManager) GetAdminClient() (kubernetes.Interface, error) {
 	cm.m.Lock()
@@ -73,8 +83,8 @@ func NewGKEAdminClient(ctx context.Context, cluster *api.Cluster, owner string) 
 	}
 	cfg := &rest.Config{
 		Host:     host,
-		Username: cluster.Spec.Cloud.GKE.UserName,
-		Password: cluster.Spec.Cloud.GKE.Password,
+		Username: cluster.Spec.Config.Cloud.GKE.UserName,
+		Password: cluster.Spec.Config.Cloud.GKE.Password,
 		TLSClientConfig: rest.TLSClientConfig{
 			CAData:   cert.EncodeCertPEM(CACert(ctx)),
 			CertData: cert.EncodeCertPEM(adminCert),
@@ -112,8 +122,8 @@ func (cm *ClusterManager) GetKubeConfig(cluster *api.Cluster) (*api.KubeConfig, 
 		},
 		AuthInfo: api.NamedAuthInfo{
 			Name:     userName,
-			Username: cluster.Spec.Cloud.GKE.UserName,
-			Password: cluster.Spec.Cloud.GKE.Password,
+			Username: cluster.Spec.Config.Cloud.GKE.UserName,
+			Password: cluster.Spec.Config.Cloud.GKE.Password,
 		},
 		Context: api.NamedContext{
 			Name:     ctxName,

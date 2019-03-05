@@ -61,7 +61,6 @@ func UseCluster(ctx context.Context, opts *options.ClusterUseConfig, konf *api.K
 
 		// Upsert user
 		konfig.AuthInfos[konf.AuthInfo.Name] = toUser(konf.AuthInfo)
-
 		// Upsert context
 		konfig.Contexts[konf.Context.Name] = toContext(konf.Context)
 	}
@@ -88,12 +87,27 @@ func toCluster(desired api.NamedCluster) *clientcmdapi.Cluster {
 }
 
 func toUser(desired api.NamedAuthInfo) *clientcmdapi.AuthInfo {
-	if desired.Token == "" {
+	if desired.Username != "" && desired.Password != "" {
+		return &clientcmdapi.AuthInfo{
+			Username: desired.Username,
+			Password: desired.Password,
+		}
+
+	} else if desired.Exec != nil {
+		return &clientcmdapi.AuthInfo{
+			Exec: &clientcmdapi.ExecConfig{
+				APIVersion: desired.Exec.APIVersion,
+				Command:    desired.Exec.Command,
+				Args:       desired.Exec.Args,
+			},
+		}
+	} else if desired.Token == "" {
 		return &clientcmdapi.AuthInfo{
 			ClientCertificateData: append([]byte(nil), desired.ClientCertificateData...),
 			ClientKeyData:         append([]byte(nil), desired.ClientKeyData...),
 		}
 	}
+
 	return &clientcmdapi.AuthInfo{
 		Token: desired.Token,
 	}

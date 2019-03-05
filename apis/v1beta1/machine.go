@@ -8,6 +8,13 @@ import (
 	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
+const (
+	ResourceCodeNodeGroup = "ng"
+	ResourceKindNodeGroup = "NodeGroup"
+	ResourceNameNodeGroup = "nodegroup"
+	ResourceTypeNodeGroup = "nodegroups"
+)
+
 type IPType string
 
 const (

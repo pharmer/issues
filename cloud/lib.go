@@ -130,7 +130,7 @@ func CreateMasterMachines(ctx context.Context, cluster *api.Cluster) (*clusterap
 	return machine, nil
 }
 
-func CreateNodeGroup(ctx context.Context, cluster *api.Cluster, owner, role, sku string, nodeType api.NodeType, count int32, spotPriceMax float64) error {
+func CreateMachineSet(ctx context.Context, cluster *api.Cluster, owner, role, sku string, nodeType api.NodeType, count int32, spotPriceMax float64) error {
 	var err error
 	if ctx, err = LoadSSHKey(ctx, cluster, owner); err != nil {
 		return err
@@ -279,6 +279,7 @@ func GetAdminConfig(ctx context.Context, cluster *api.Cluster, owner string) (*a
 		if err != nil {
 			return nil, err
 		}
+		cm.SetOwner(owner)
 		return cm.GetKubeConfig(cluster)
 	}
 	var err error

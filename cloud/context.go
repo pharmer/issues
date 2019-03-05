@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"fmt"
 
 	"github.com/appscode/go/crypto/ssh"
 	_env "github.com/appscode/go/env"
@@ -168,7 +167,6 @@ func NewStoreProvider(ctx context.Context, cfg *api.PharmerConfig) store.Interfa
 	} else {
 
 	}
-	fmt.Println(storeType, "XXXXXXXXXXXXXXXXXXx")
 	if store, err := store.GetProvider(storeType, ctx, cfg); err == nil {
 		return store
 	}

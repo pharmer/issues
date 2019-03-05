@@ -35,7 +35,7 @@ func NewCmdCreateNodeGroup() *cobra.Command {
 
 			ctx := cloud.NewContext(context.Background(), cfg, config.GetEnv(cmd.Flags()))
 
-			CreateNodeGroups(ctx, opts)
+			CreateMachineSets(ctx, opts)
 
 		},
 	}
@@ -44,11 +44,11 @@ func NewCmdCreateNodeGroup() *cobra.Command {
 	return cmd
 }
 
-func CreateNodeGroups(ctx context.Context, opts *options.NodeGroupCreateConfig) {
+func CreateMachineSets(ctx context.Context, opts *options.NodeGroupCreateConfig) {
 	cluster, err := cloud.Get(ctx, opts.ClusterName, opts.Owner)
 	term.ExitOnError(err)
 	for sku, count := range opts.Nodes {
-		err := cloud.CreateNodeGroup(ctx, cluster, opts.Owner, api.RoleNode, sku, api.NodeType(opts.NodeType), int32(count), opts.SpotPriceMax)
+		err := cloud.CreateMachineSet(ctx, cluster, opts.Owner, api.RoleNode, sku, api.NodeType(opts.NodeType), int32(count), opts.SpotPriceMax)
 		term.ExitOnError(err)
 	}
 }
