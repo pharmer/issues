@@ -60,10 +60,10 @@ func CreateCACertificates(ctx context.Context, cluster *api.Cluster, owner strin
 	return ctx, nil
 }
 
-func CreateEtcdCertificates(ctx context.Context, cluster *api.Cluster) (context.Context, error) {
+func CreateEtcdCertificates(ctx context.Context, cluster *api.Cluster, owner string) (context.Context, error) {
 	Logger(ctx).Infoln("Generating ETCD CA certificate for etcd")
 
-	certStore := Store(ctx).Certificates(cluster.Name)
+	certStore := Store(ctx).Owner(owner).Certificates(cluster.Name)
 
 	// -----------------------------------------------
 	caKey, err := cert.NewPrivateKey()
@@ -105,8 +105,8 @@ func LoadCACertificates(ctx context.Context, cluster *api.Cluster, owner string)
 	return ctx, nil
 }
 
-func LoadApiserverCertificate(ctx context.Context, cluster *api.Cluster) (context.Context, error) {
-	certStore := Store(ctx).Certificates(cluster.Name)
+func LoadApiserverCertificate(ctx context.Context, cluster *api.Cluster, owner string) (context.Context, error) {
+	certStore := Store(ctx).Owner(owner).Certificates(cluster.Name)
 	apiserverCaCert, apiserverCaKey, err := certStore.Get(kubeadmconst.APIServerCertAndKeyBaseName + "-ca")
 	if err != nil {
 		return ctx, errors.Errorf("failed to get apiserver certificates. Reason: %v", err)
@@ -124,8 +124,8 @@ func LoadApiserverCertificate(ctx context.Context, cluster *api.Cluster) (contex
 	return ctx, nil
 }
 
-func LoadSaKey(ctx context.Context, cluster *api.Cluster) (context.Context, error) {
-	certStore := Store(ctx).Certificates(cluster.Name)
+func LoadSaKey(ctx context.Context, cluster *api.Cluster, owner string) (context.Context, error) {
+	certStore := Store(ctx).Owner(owner).Certificates(cluster.Name)
 	cert, key, err := certStore.Get(kubeadmconst.ServiceAccountKeyBaseName)
 	if err != nil {
 		return ctx, errors.Errorf("failed to get service account key. Reason: %v", err)
@@ -135,8 +135,8 @@ func LoadSaKey(ctx context.Context, cluster *api.Cluster) (context.Context, erro
 	return ctx, nil
 }
 
-func LoadEtcdCertificate(ctx context.Context, cluster *api.Cluster) (context.Context, error) {
-	certStore := Store(ctx).Certificates(cluster.Name)
+func LoadEtcdCertificate(ctx context.Context, cluster *api.Cluster, owner string) (context.Context, error) {
+	certStore := Store(ctx).Owner(owner).Certificates(cluster.Name)
 	etcdCaCert, etcdCaKey, err := certStore.Get(EtcdCACertAndKeyBaseName)
 	if err != nil {
 		return ctx, errors.Errorf("failed to get etcd certificates. Reason: %v", err)

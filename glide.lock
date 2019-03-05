@@ -1,5 +1,5 @@
-hash: bf52fd94836866881da87f34df238ebd63fd9ddc5f62376a1251d2102ad84b70
-updated: 2019-03-05T16:11:57.672473051+06:00
+hash: 8226ee1d11f2d5692ecb784f50848d9c0fd408eacb68d562fe3edaf26d660563
+updated: 2019-03-05T16:34:06.57673775+06:00
 imports:
 - name: cloud.google.com/go
   version: 74b12019e2aa53ec27882158f59192d7cd6d1998
@@ -326,6 +326,19 @@ imports:
   version: 609b752a95effbbef26d134ac18ed6f57e01b98e
 - name: github.com/moul/gotty-client
   version: c1b82f1af3ebb2febba268415cb1c90686078f80
+- name: github.com/nats-io/go-nats
+  version: 157b49a9f5225ba2151ded84979e875b1fdd5b95
+  subpackages:
+  - encoders/builtin
+  - util
+- name: github.com/nats-io/go-nats-streaming
+  version: 82824caf82d8e87d762226c5060006dfbd97107f
+  subpackages:
+  - pb
+- name: github.com/nats-io/nkeys
+  version: 1546a3320a8f195a5b5c84aef8309377c2e411d5
+- name: github.com/nats-io/nuid
+  version: 3024a71c3cbe30667286099921591e6fcc328230
 - name: github.com/ncw/swift
   version: a12c20e04ddb87207d41409a7afda9848aba8df2
 - name: github.com/onsi/ginkgo
@@ -904,7 +917,7 @@ imports:
   - exec/testing
   - pointer
 - name: sigs.k8s.io/cluster-api
-  version: 813b1fec840d79b37fe86778237b6db6d1cb959d
+  version: c51a9c13aa0ebe6d2d7bef869094b9b78bebcd48
   subpackages:
   - cmd/clusterctl/clientcmd
   - cmd/clusterctl/clusterdeployer/bootstrap
@@ -960,6 +973,10 @@ imports:
 - name: sigs.k8s.io/yaml
   version: fd68e9863619f6ec2fdd8625fe1f02e7c877e480
 testImports:
+- name: code.gitea.io/sdk
+  version: e4effe4df2b895ca51482d24edb8748704326f1a
+  subpackages:
+  - gitea
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:

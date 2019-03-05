@@ -193,7 +193,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			Message:  fmt.Sprintf("Found %v.compute.internal dscp option set", cm.cluster.Spec.Cloud.Region),
 		})
 	}
-	Store(cm.ctx).Clusters().Update(cm.cluster)
+	Store(cm.ctx).Owner(cm.owner).Clusters().Update(cm.cluster)
 
 	var kc kubernetes.Interface
 	kc, err = cm.GetAdminClient()
@@ -206,7 +206,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 	}
 
 	cm.cluster.Status.Phase = api.ClusterReady
-	if _, err = Store(cm.ctx).Clusters().UpdateStatus(cm.cluster); err != nil {
+	if _, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster); err != nil {
 		return
 	}
 
@@ -234,8 +234,8 @@ func (cm *ClusterManager) applyScale(dryRun bool) (acts []api.Action, err error)
 		}
 		acts = append(acts, a2...)
 	}
-	Store(cm.ctx).Clusters().UpdateStatus(cm.cluster)
-	Store(cm.ctx).Clusters().Update(cm.cluster)
+	Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster)
+	Store(cm.ctx).Owner(cm.owner).Clusters().Update(cm.cluster)
 	return
 }
 
@@ -245,7 +245,7 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 		cm.cluster.Status.Phase = api.ClusterDeleting
 	}
 	var found bool
-	_, err = Store(cm.ctx).Clusters().UpdateStatus(cm.cluster)
+	_, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster)
 	if err != nil {
 		return
 	}
@@ -291,7 +291,7 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 
 	if !dryRun {
 		cm.cluster.Status.Phase = api.ClusterDeleted
-		Store(cm.ctx).Clusters().Update(cm.cluster)
+		Store(cm.ctx).Owner(cm.owner).Clusters().Update(cm.cluster)
 	}
 
 	return

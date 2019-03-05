@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/appscode/go/term"
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pharmer/pharmer/cloud"
 	"github.com/pharmer/pharmer/cloud/cmds/options"
 	"github.com/pharmer/pharmer/config"
@@ -45,10 +45,10 @@ func NewCmdCreateNodeGroup() *cobra.Command {
 }
 
 func CreateNodeGroups(ctx context.Context, opts *options.NodeGroupCreateConfig) {
-	/*cluster, err := cloud.Get(ctx, opts.ClusterName, opts.Owner)
+	cluster, err := cloud.Get(ctx, opts.ClusterName, opts.Owner)
 	term.ExitOnError(err)
 	for sku, count := range opts.Nodes {
-		err := cloud.CreateNodeGroup(ctx, cluster, opts.Owner, api.RoleNode, sku, api.NodeType(opts.NodeType), count, opts.SpotPriceMax)
+		err := cloud.CreateNodeGroup(ctx, cluster, opts.Owner, api.RoleNode, sku, api.NodeType(opts.NodeType), int32(count), opts.SpotPriceMax)
 		term.ExitOnError(err)
-	}*/
+	}
 }

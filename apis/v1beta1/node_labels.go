@@ -12,6 +12,13 @@ import (
 )
 
 const (
+	ResourceCodeNodeGroup = "ng"
+	ResourceKindNodeGroup = "NodeGroup"
+	ResourceNameNodeGroup = "nodegroup"
+	ResourceTypeNodeGroup = "nodegroups"
+)
+
+const (
 	NodeLabelKey_ContextVersion = "kubernetes.appscode.com/context"
 	// ref: https://github.com/kubernetes/apimachinery/blob/master/pkg/apis/meta/v1/well_known_labels.go#L70
 	NodeLabelKey_Role     = "kubernetes.io/role"

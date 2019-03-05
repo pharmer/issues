@@ -18,12 +18,13 @@ type machineFileStore struct {
 	container stow.Container
 	prefix    string
 	cluster   string
+	owner     string
 }
 
 var _ store.MachineStore = &machineFileStore{}
 
 func (s *machineFileStore) resourceHome() string {
-	return filepath.Join(s.prefix, "clusters", s.cluster, "machine")
+	return filepath.Join(s.owner, s.prefix, "clusters", s.cluster, "machine")
 }
 
 func (s *machineFileStore) resourceID(name string) string {

@@ -116,7 +116,7 @@ import:
 - package: cloud.google.com/go
   version: v0.33.1
 - package: sigs.k8s.io/cluster-api
-  version: master
+  version: c51a9c13aa0ebe6d2d7bef869094b9b78bebcd48
 - package: sigs.k8s.io/controller-runtime
   version: v0.1.9
 - package: github.com/prometheus/client_golang
