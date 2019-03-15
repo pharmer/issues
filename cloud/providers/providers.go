@@ -11,4 +11,6 @@ import (
 	_ "github.com/pharmer/pharmer/cloud/providers/gke"
 	_ "github.com/pharmer/pharmer/cloud/providers/linode"
 	_ "github.com/pharmer/pharmer/cloud/providers/vultr"
+	_ "github.com/pharmer/pharmer/cloud/providers/azure"
+	_ "github.com/pharmer/pharmer/cloud/providers/packet"
 )
