@@ -1,5 +1,5 @@
-hash: a0a5cf9a5c2a9665c252d29f8a841d015d36e16442ff0d1498bdcc7d3b9e05f4
-updated: 2019-03-14T23:09:03.16719631-07:00
+hash: 53922944532df31b809a7650b49f2c2a21a75eb660d34e493491061903e9e061
+updated: 2019-03-14T23:31:09.018399344-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -142,7 +142,7 @@ imports:
 - name: github.com/dgrijalva/jwt-go
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/digitalocean/godo
-  version: 51f18c0e42941703dc13d15bc0ad69aef6a49830
+  version: 19a129a06bc8b565baeea8761ba6bf24b80ac262
 - name: github.com/docker/docker
   version: a9fbbdc8dd8794b20af358382ab780559bca589d
   subpackages:
@@ -160,7 +160,7 @@ imports:
 - name: github.com/exponent-io/jsonpath
   version: d6023ce2651d8eafb5c75bb0c7167536102ec9f5
 - name: github.com/fatih/color
-  version: 3f9d52f7176a6927daacff70a3e8d1dc2025c53e
+  version: 9aae6aaa22315390f03959adca2c4d395b02fcef
 - name: github.com/fsnotify/fsnotify
   version: 1485a34d5d5723fea214f5710708e19a831720e4
 - name: github.com/ghodss/yaml
@@ -393,8 +393,6 @@ imports:
   - doc
 - name: github.com/spf13/pflag
   version: 298182f68c66c05229eb03ac171abe6e309ee79a
-- name: github.com/tent/http-link-go
-  version: ac974c61c2f990f4115b119354b5e0b47550e888
 - name: golang.org/x/crypto
   version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:

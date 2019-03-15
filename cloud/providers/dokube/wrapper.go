@@ -3,15 +3,16 @@ package dokube
 import (
 	"context"
 	"crypto/rsa"
+	"net/url"
+
 	"github.com/digitalocean/godo"
 	. "github.com/pharmer/pharmer/cloud"
 	core "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/cert"
-	"net/url"
 )
 
-func (cm *ClusterManager) retrieveClusterStatus(cluster *godo.KubernetesCluster) error{
+func (cm *ClusterManager) retrieveClusterStatus(cluster *godo.KubernetesCluster) error {
 	u, err := url.Parse(cluster.Endpoint)
 	if err != nil {
 		return err

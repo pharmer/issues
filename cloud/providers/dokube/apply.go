@@ -2,13 +2,13 @@ package dokube
 
 import (
 	"fmt"
+	"log"
+
 	api "github.com/pharmer/pharmer/apis/v1alpha1"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
-	"k8s.io/client-go/kubernetes"
-	"log"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, error) {

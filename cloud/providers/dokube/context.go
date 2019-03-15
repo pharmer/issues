@@ -3,6 +3,8 @@ package dokube
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	api "github.com/pharmer/pharmer/apis/v1alpha1"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
@@ -10,7 +12,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/cert"
-	"sync"
 )
 
 type ClusterManager struct {

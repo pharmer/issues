@@ -25,7 +25,7 @@ func (cm *ClusterManager) SetDefaults(cluster *api.Cluster) error {
 	cluster.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Now()}
 	cluster.ObjectMeta.Generation = time.Now().UnixNano()
 	err := api.AssignTypeKind(cluster)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	// Init spec
@@ -37,8 +37,7 @@ func (cm *ClusterManager) SetDefaults(cluster *api.Cluster) error {
 	cluster.Spec.Networking.PodSubnet = "10.244.0.0/16"
 	cluster.Spec.Networking.NetworkProvider = "CALICO"
 
-	cluster.Spec.Cloud.Dokube = &api.DokubeSpec{
-	}
+	cluster.Spec.Cloud.Dokube = &api.DokubeSpec{}
 	// Init status
 	cluster.Status = api.ClusterStatus{
 		Phase: api.ClusterPending,

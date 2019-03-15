@@ -2,6 +2,9 @@ package dokube
 
 import (
 	"context"
+	"strconv"
+	"time"
+
 	"github.com/appscode/go/wait"
 	"github.com/digitalocean/godo"
 	api "github.com/pharmer/pharmer/apis/v1alpha1"
@@ -10,8 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strconv"
-	"time"
 )
 
 const (

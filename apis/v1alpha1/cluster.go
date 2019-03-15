@@ -162,7 +162,7 @@ type AzureSpec struct {
 }
 
 type DokubeSpec struct {
-	ClusterID 	string `json:"clusterID,omitempty" protobuf:"bytes,3,opt,name=clusterID"`
+	ClusterID string `json:"clusterID,omitempty" protobuf:"bytes,3,opt,name=clusterID"`
 }
 
 type LinodeSpec struct {
@@ -185,7 +185,7 @@ type CloudSpec struct {
 	Azure                *AzureSpec  `json:"azure,omitempty" protobuf:"bytes,12,opt,name=azure"`
 	Linode               *LinodeSpec `json:"linode,omitempty" protobuf:"bytes,13,opt,name=linode"`
 	GKE                  *GKESpec    `json:"gke,omitempty" protobuf:"bytes,14,opt,name=gke"`
-	Dokube				 *DokubeSpec `json:"dokube,omitempty" protobuf:"bytes,15,opt,name=dokube"`
+	Dokube               *DokubeSpec `json:"dokube,omitempty" protobuf:"bytes,15,opt,name=dokube"`
 }
 
 type API struct {
