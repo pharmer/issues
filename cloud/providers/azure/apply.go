@@ -7,16 +7,14 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
 	armstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2017-10-01/storage"
-	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-
 	api "github.com/pharmer/pharmer/apis/v1beta1"
+	capiAzure "github.com/pharmer/pharmer/apis/v1beta1/azure"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	capiAzure "github.com/pharmer/pharmer/apis/v1beta1/azure"
+	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, error) {
