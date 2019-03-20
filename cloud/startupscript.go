@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	version "github.com/appscode/go-version"
+	"github.com/appscode/go-version"
 	"github.com/ghodss/yaml"
 	api "github.com/pharmer/pharmer/apis/v1alpha1"
 	"github.com/pkg/errors"
@@ -41,6 +41,8 @@ type TemplateData struct {
 	CAHash            string
 	CAKey             string
 	FrontProxyKey     string
+	SAKey             string
+	ETCDCAKey         string
 	APIServerAddress  string
 	NetworkProvider   string
 	CloudConfig       string
@@ -50,8 +52,9 @@ type TemplateData struct {
 
 	InitConfiguration    *kubeadmapi.InitConfiguration
 	ClusterConfiguration *kubeadmapi.ClusterConfiguration
-	JoinConfiguration    *kubeadmapi.JoinConfiguration
+	JoinConfiguration    string
 	KubeletExtraArgs     map[string]string
+	ControlPlaneJoin     bool
 }
 
 func (td TemplateData) InitConfigurationYAML() (string, error) {
@@ -87,14 +90,6 @@ func (td TemplateData) ClusterConfigurationYAML() (string, error) {
 }
 
 func (td TemplateData) JoinConfigurationYAML() (string, error) {
-	apiAddress := strings.Split(td.APIServerAddress, ":")
-	if len(apiAddress) < 2 {
-		return "", errors.Errorf("Apiserver address is not correct")
-	}
-	apiPort, err := strconv.Atoi(apiAddress[1])
-	if err != nil {
-		return "", err
-	}
 	var cb []byte
 
 	cfg := kubeadmapi.JoinConfiguration{
@@ -113,8 +108,24 @@ func (td TemplateData) JoinConfigurationYAML() (string, error) {
 			},
 		},
 	}
-	cb, err = yaml.Marshal(cfg)
+
+	if td.ControlPlaneJoin {
+		// TODO FIX
+		cfg.ControlPlane = &kubeadmapi.JoinControlPlane{}
+		cfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress = "CONTROLPLANEIP"
+		cfg.ControlPlane.LocalAPIEndpoint.BindPort = kubeadmapi.DefaultAPIBindPort
+	}
+
+	cb, err := yaml.Marshal(cfg)
 	if td.IsVersionLessThan1_13() {
+		apiAddress := strings.Split(td.APIServerAddress, ":")
+		if len(apiAddress) < 2 {
+			return "", errors.Errorf("Apiserver address is not correct")
+		}
+		apiPort, err := strconv.Atoi(apiAddress[1])
+		if err != nil {
+			return "", err
+		}
 		conf := ConvertJoinConfigFromV1beta1ToV1alpha3(&cfg)
 		conf.ClusterName = td.ClusterName
 		conf.APIEndpoint.AdvertiseAddress = apiAddress[0]
@@ -290,7 +301,22 @@ mkdir -p /etc/kubernetes/kubeadm
 
 {{ template "pre-k" . }}
 
+{{ if not .ControlPlaneJoin }}
 kubeadm init --config=/etc/kubernetes/kubeadm/config.yaml --skip-token-print
+{{ else }}
+
+cat > /etc/kubernetes/kubeadm/join.yaml <<EOF
+{{ .JoinConfiguration }}
+EOF
+
+PUBLIC_IP=$(pre-k machine public-ips --all=false)
+echo $PUBLIC_IP
+sed -i "s/CONTROLPLANEIP/$PUBLIC_IP/g" /etc/kubernetes/kubeadm/join.yaml
+cat /etc/kubernetes/kubeadm/join.yaml
+
+kubeadm join --config=/etc/kubernetes/kubeadm/join.yaml
+
+{{ end }}
 
 {{ if .UseKubeProxy1_11_0 }}
 kubectl apply -f https://raw.githubusercontent.com/pharmer/addons/release-1.11/kube-proxy/v1.11.0/kube-proxy.yaml \
@@ -375,7 +401,7 @@ systemctl start docker kubelet nfs-utils
 mkdir -p /etc/kubernetes/kubeadm
 
 cat > /etc/kubernetes/kubeadm/join.yaml <<EOF
-{{ .JoinConfigurationYAML }}
+{{ .JoinConfiguration }}
 EOF
 
 
@@ -441,6 +467,20 @@ cat > /etc/kubernetes/pki/front-proxy-ca.key <<EOF
 EOF
 pre-k get ca-cert --common-name=front-proxy-ca < /etc/kubernetes/pki/front-proxy-ca.key > /etc/kubernetes/pki/front-proxy-ca.crt
 chmod 600 /etc/kubernetes/pki/ca.key /etc/kubernetes/pki/front-proxy-ca.key
+
+cat > /etc/kubernetes/pki/sa.key <<EOF
+{{ .SAKey }}
+EOF
+pre-k get pub-key < /etc/kubernetes/pki/sa.key > /etc/kubernetes/pki/sa.pub
+
+# ETCD Keys
+mkdir -p /etc/kubernetes/pki/etcd
+cat > /etc/kubernetes/pki/etcd/ca.key <<EOF
+{{ .ETCDCAKey }}
+EOF
+pre-k get ca-cert --common-name=kubernetes < /etc/kubernetes/pki/etcd/ca.key > /etc/kubernetes/pki/etcd/ca.crt
+chmod 600 /etc/kubernetes/pki/etcd/ca.key
+
 `))
 
 	_ = template.Must(StartupScriptTemplate.New("ccm").Parse(`
@@ -449,7 +489,7 @@ cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.github
 exec_until_success "$cmd"
 
 # Deploy CCM DaemonSet
-cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/master/cloud-controller-manager/{{ .Provider }}/installer.yaml'
+cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.13/cloud-controller-manager/{{ .Provider }}/installer.yaml'
 exec_until_success "$cmd"
 
 until [ $(kubectl get pods -n kube-system -l k8s-app=kube-dns -o jsonpath='{.items[0].status.phase}' --kubeconfig /etc/kubernetes/admin.conf) == "Running" ]

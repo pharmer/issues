@@ -67,6 +67,12 @@ func Create(ctx context.Context, cluster *api.Cluster, owner string) (*api.Clust
 	if ctx, err = CreateCACertificates(ctx, cluster, owner); err != nil {
 		return nil, err
 	}
+	if ctx, err = CreateServiceAccountKey(ctx, cluster, owner); err != nil {
+		return nil, err
+	}
+	if ctx, err = CreateEtcdCertificates(ctx, cluster, owner); err != nil {
+		return nil, err
+	}
 	if ctx, err = CreateSSHKey(ctx, cluster, owner); err != nil {
 		return nil, err
 	}

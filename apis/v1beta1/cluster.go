@@ -189,6 +189,7 @@ type CloudStatus struct {
 	AWS              *AWSStatus   `json:"aws,omitempty" protobuf:"bytes,2,opt,name=aws"`
 	EKS              *EKSStatus   `json:"eks,omitempty" protobuf:"bytes,2,opt,name=eks"`
 	Azure            *AzureStatus `json:"azure,omitempty"`
+	LoadBalancer     string       `json:"loadBalancer,omitempty"`
 }
 
 type AzureStatus struct {

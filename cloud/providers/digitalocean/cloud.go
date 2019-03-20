@@ -63,7 +63,9 @@ func (conn *cloudConnector) IsUnauthorized() (bool, string) {
 	if err != nil {
 		return false, "Credential missing WRITE scope"
 	}
-	conn.client.Tags.Delete(context.TODO(), name)
+	if _, err := conn.client.Tags.Delete(context.TODO(), name); err != nil {
+		return false, err.Error()
+	}
 	return true, ""
 }
 
@@ -83,15 +85,15 @@ func PrepareCloud(ctx context.Context, clusterName, owner string) (*cloudConnect
 	if ctx, err = LoadCACertificates(ctx, cluster, owner); err != nil {
 		return conn, err
 	}
-	/*if cm.ctx, err = LoadEtcdCertificate(cm.ctx, cm.cluster); err != nil {
-		return err
-	}*/
+	if ctx, err = LoadEtcdCertificate(ctx, cluster, owner); err != nil {
+		return nil, err
+	}
 	if ctx, err = LoadSSHKey(ctx, cluster, owner); err != nil {
 		return conn, err
 	}
-	/*if cm.ctx, err = LoadSaKey(cm.ctx, cm.cluster); err != nil {
-		return err
-	}*/
+	if ctx, err = LoadSaKey(ctx, cluster, owner); err != nil {
+		return conn, err
+	}
 
 	if conn, err = NewConnector(ctx, cluster, owner); err != nil {
 		return nil, err
@@ -372,31 +374,31 @@ func (conn *cloudConnector) deleteInstance(ctx context.Context, id int) error {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (conn *cloudConnector) createLoadBalancer(ctx context.Context, name string) (string, error) {
+func (conn *cloudConnector) createLoadBalancer(ctx context.Context, name string) (*godo.LoadBalancer, error) {
 	lb, err := conn.lbByName(ctx, name)
 	if err != nil {
 		if err == errLBNotFound {
 			lbRequest, err := conn.buildLoadBalancerRequest(name)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			lb, _, err := conn.client.LoadBalancers.Create(ctx, lbRequest)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			if lb, err = conn.waitActive(lb.ID); err != nil {
-				return "", err
+				return nil, err
 			}
-			return lb.IP, nil
+			return lb, nil
 		}
 	}
 
 	if lb.Status != "active" {
 		if lb, err = conn.waitActive(lb.ID); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
-	return lb.IP, nil
+	return lb, nil
 }
 
 func (conn *cloudConnector) deleteLoadBalancer(ctx context.Context, name string) error {
@@ -483,6 +485,8 @@ func (conn *cloudConnector) buildLoadBalancerRequest(lbName string) (*godo.LoadB
 		StickySessions:      stickySessions,
 		Algorithm:           algorithm,
 		RedirectHttpToHttps: false, //redirectHttpToHttps,
+		Tag:                 "KubernetesCluster:" + conn.cluster.Name,
+		Tags:                []string{"KubernetesCluster:" + conn.cluster.Name},
 	}, nil
 }
 
@@ -496,7 +500,6 @@ func (conn *cloudConnector) waitActive(lbID string) (*godo.LoadBalancer, error) 
 			return false, nil
 		}
 		Logger(conn.ctx).Infof("Attempt %v: LoadBalancer `%v` is in status `%s`", attempt, lbID, lb.Status)
-		fmt.Println(lb.String())
 		if strings.ToLower(lb.Status) == "active" {
 			return true, nil
 		}

@@ -3,9 +3,11 @@ package digitalocean
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
+	"github.com/the-redback/go-oneliners"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/cert"
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta1"
@@ -21,13 +23,13 @@ func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clu
 		KubeadmToken:      token,
 		CAHash:            pubkeypin.Hash(CACert(ctx)),
 		CAKey:             string(cert.EncodePrivateKeyPEM(CAKey(ctx))),
-		//SAKey:            string(cert.EncodePrivateKeyPEM(SaKey(ctx))),
-		FrontProxyKey: string(cert.EncodePrivateKeyPEM(FrontProxyCAKey(ctx))),
-		//ETCDCAKey:        string(cert.EncodePrivateKeyPEM(EtcdCaKey(ctx))),
-		APIServerAddress: cluster.APIServerAddress(),
-		NetworkProvider:  cluster.ClusterConfig().Cloud.NetworkProvider,
-		Provider:         cluster.ClusterConfig().Cloud.CloudProvider,
-		ExternalProvider: true, // DigitalOcean uses out-of-tree CCM
+		SAKey:             string(cert.EncodePrivateKeyPEM(SaKey(ctx))),
+		FrontProxyKey:     string(cert.EncodePrivateKeyPEM(FrontProxyCAKey(ctx))),
+		ETCDCAKey:         string(cert.EncodePrivateKeyPEM(EtcdCaKey(ctx))),
+		APIServerAddress:  cluster.APIServerAddress(),
+		NetworkProvider:   cluster.ClusterConfig().Cloud.NetworkProvider,
+		Provider:          cluster.ClusterConfig().Cloud.CloudProvider,
+		ExternalProvider:  true, // DigitalOcean uses out-of-tree CCM
 	}
 	{
 		td.KubeletExtraArgs = map[string]string{}
@@ -44,6 +46,8 @@ func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clu
 		//td.KubeletExtraArgs["keep-terminated-pod-volumes"] = "true"
 
 	}
+	joinConf, _ := td.JoinConfigurationYAML()
+	td.JoinConfiguration = joinConf
 
 	if machine.Spec.Versions.ControlPlane == "" {
 		td.KubernetesVersion = machine.Spec.Versions.Kubelet
@@ -52,8 +56,8 @@ func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clu
 	return td
 }
 
-func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *clusterv1.Machine) TemplateData {
-	td := newNodeTemplateData(ctx, cluster, machine, "")
+func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *clusterv1.Machine, token string) TemplateData {
+	td := newNodeTemplateData(ctx, cluster, machine, token)
 	td.KubeletExtraArgs["node-labels"] = api.NodeLabels{
 		api.NodePoolKey: machine.Name,
 	}.String()
@@ -100,6 +104,23 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *c
 		},
 		ClusterName: cluster.Name,
 	}
+
+	if cluster.Status.Cloud.LoadBalancer != "" {
+		cfg.ControlPlaneEndpoint = fmt.Sprintf("%s:%s", cluster.Status.Cloud.LoadBalancer, "6443")
+		cfg.APIServer.CertSANs = append(cfg.APIServer.CertSANs, cluster.Status.Cloud.LoadBalancer)
+	}
+
+	if token != "" {
+		td.ControlPlaneJoin = true
+
+		joinConf, err := td.JoinConfigurationYAML()
+		if err != nil {
+			panic(err)
+		}
+		oneliners.PrettyJson(joinConf)
+		td.JoinConfiguration = joinConf
+	}
+
 	td.ClusterConfiguration = &cfg
 
 	return td
@@ -165,7 +186,7 @@ func (conn *cloudConnector) renderStartupScript(cluster *api.Cluster, machine *c
 
 	var script bytes.Buffer
 	if util.IsControlPlaneMachine(machine) {
-		if err := tpl.ExecuteTemplate(&script, api.RoleMaster, newMasterTemplateData(conn.ctx, cluster, machine)); err != nil {
+		if err := tpl.ExecuteTemplate(&script, api.RoleMaster, newMasterTemplateData(conn.ctx, cluster, machine, token)); err != nil {
 			return "", err
 		}
 	} else {

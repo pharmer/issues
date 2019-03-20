@@ -1,6 +1,7 @@
 package digitalocean
 
 import (
+	"context"
 	"encoding/json"
 
 	semver "github.com/appscode/go-version"
@@ -31,6 +32,7 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 		return nil, nil
 	}
 	cm.cluster = in
+	cm.namer = namer{cluster: cm.cluster}
 
 	if cm.conn, err = PrepareCloud(cm.ctx, in.Name, cm.owner); err != nil {
 		return nil, err
@@ -152,6 +154,27 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		})
 	}
 
+	lb, err := cm.conn.lbByName(context.Background(), cm.namer.LoadBalancerName())
+	if err == errLBNotFound {
+		acts = append(acts, api.Action{
+			Action:   api.ActionAdd,
+			Resource: "Load Balancer",
+			Message:  fmt.Sprintf("Load Balancer will be created"),
+		})
+		lb, err = cm.conn.createLoadBalancer(context.Background(), cm.namer.LoadBalancerName())
+		if err != nil {
+			return
+		}
+	} else {
+		acts = append(acts, api.Action{
+			Action:   api.ActionAdd,
+			Resource: "Load Balancer",
+			Message:  fmt.Sprintf("Load Balancer %q found", lb.Name),
+		})
+	}
+
+	cm.cluster.Status.Cloud.LoadBalancer = lb.IP
+
 	// -------------------------------------------------------------------ASSETS
 	var machines []*clusterv1.Machine
 	machines, err = Store(cm.ctx).Owner(cm.owner).Machine(cm.cluster.Name).List(metav1.ListOptions{})
@@ -172,27 +195,32 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			Message:  fmt.Sprintf("Master instance %s will be created", masterMachine.Name),
 		})
 		if !dryRun {
-			var masterServer *api.NodeInfo
-			nodeAddresses := make([]core.NodeAddress, 0)
+			//var masterServer *api.NodeInfo
+			nodeAddresses := []core.NodeAddress{
+				{
+					Type:    core.NodeExternalDNS,
+					Address: cm.cluster.Status.Cloud.LoadBalancer,
+				},
+			}
 
-			masterServer, err = cm.conn.CreateInstance(cm.cluster, masterMachine, "")
+			_, err = cm.conn.CreateInstance(cm.cluster, masterMachine, "")
 			if err != nil {
 				return
 			}
 
-			if masterServer.PrivateIP != "" {
-				nodeAddresses = append(nodeAddresses, core.NodeAddress{
-					Type:    core.NodeInternalIP,
-					Address: masterServer.PrivateIP,
-				})
-			}
-
-			if masterServer.PublicIP != "" {
-				nodeAddresses = append(nodeAddresses, core.NodeAddress{
-					Type:    core.NodeExternalIP,
-					Address: masterServer.PublicIP,
-				})
-			}
+			//if masterServer.PrivateIP != "" {
+			//	nodeAddresses = append(nodeAddresses, core.NodeAddress{
+			//		Type:    core.NodeInternalIP,
+			//		Address: masterServer.PrivateIP,
+			//	})
+			//}
+			//
+			//if masterServer.PublicIP != "" {
+			//	nodeAddresses = append(nodeAddresses, core.NodeAddress{
+			//		Type:    core.NodeExternalIP,
+			//		Address: masterServer.PublicIP,
+			//	})
+			//}
 			if err = cm.cluster.SetClusterApiEndpoints(nodeAddresses); err != nil {
 				return
 			}
@@ -220,12 +248,6 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		return
 	}
 
-	// needed to get master_internal_ip
-	cm.cluster.Status.Phase = api.ClusterReady
-	if _, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster); err != nil {
-		return
-	}
-
 	// need to run ccm
 	if err = CreateCredentialSecret(cm.ctx, kc, cm.cluster, cm.owner); err != nil {
 		return
@@ -237,6 +259,11 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 	}
 	if err := ca.Apply(ControllerManager); err != nil {
 		return acts, err
+	}
+
+	cm.cluster.Status.Phase = api.ClusterReady
+	if _, err = Store(cm.ctx).Owner(cm.owner).Clusters().UpdateStatus(cm.cluster); err != nil {
+		return
 	}
 
 	return acts, err
@@ -385,6 +412,28 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 			Message:  "Public key not found",
 		})
 	}
+
+	_, err = cm.conn.lbByName(context.Background(), cm.namer.LoadBalancerName())
+	if err == errLBNotFound {
+		acts = append(acts, api.Action{
+			Action:   api.ActionNOP,
+			Resource: "Load Balancer",
+			Message:  "Load Balancer not found",
+		})
+	} else {
+		if !dryRun {
+			if err = cm.conn.deleteLoadBalancer(context.Background(), cm.namer.LoadBalancerName()); err != nil {
+				return
+			}
+		}
+
+		acts = append(acts, api.Action{
+			Action:   api.ActionDelete,
+			Resource: "Load Balancer",
+			Message:  "Load Balancer deleted",
+		})
+	}
+
 	/*if IsHASetup(cm.cluster) {
 		cm.conn.deleteLoadBalancer(cm.ctx, cm.namer.LoadBalancerName())
 	}

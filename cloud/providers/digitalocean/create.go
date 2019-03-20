@@ -70,8 +70,9 @@ func (cm *ClusterManager) SetDefaultCluster(cluster *api.Cluster, config *api.Cl
 	config.APIServerExtraArgs = map[string]string{
 		// ref: https://github.com/kubernetes/kubernetes/blob/d595003e0dc1b94455d1367e96e15ff67fc920fa/cmd/kube-apiserver/app/options/options.go#L99
 		"kubelet-preferred-address-types": strings.Join([]string{
-			string(core.NodeInternalIP),
+			string(core.NodeExternalDNS),
 			string(core.NodeExternalIP),
+			string(core.NodeInternalIP),
 		}, ","),
 		//	"endpoint-reconciler-type": "lease",
 	}

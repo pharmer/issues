@@ -271,7 +271,7 @@ func (do *MachineActuator) Exists(ctx context.Context, cluster *clusterv1.Cluste
 		return false, err
 	}
 	i, err := do.conn.instanceIfExists(machine)
-	fmt.Println(err)
+	fmt.Println("11111111111111111111", err)
 	if err != nil {
 		return false, nil
 	}
