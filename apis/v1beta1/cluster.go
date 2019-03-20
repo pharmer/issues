@@ -192,6 +192,8 @@ type CloudStatus struct {
 	LoadBalancer     string       `json:"loadBalancer,omitempty"`
 }
 
+// Depricated
+// TODO: REMOVE
 type AzureStatus struct {
 	LBDNS string `json:"lbDNS,omitempty"`
 }
@@ -201,6 +203,8 @@ type AWSStatus struct {
 	NodeSGId    string `json:"nodeSGID,omitempty" protobuf:"bytes,2,opt,name=nodeSGID"`
 	BastionSGId string `json:"bastionSGID,omitempty"`
 
+	// Depricaed
+	// TODO: REMOVE
 	LBDNS string `json:"lbDNS,omitempty"`
 }
 

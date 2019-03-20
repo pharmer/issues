@@ -6,9 +6,11 @@ import (
 	"strings"
 
 	api "github.com/pharmer/pharmer/apis/v1beta1"
+	doCapi "github.com/pharmer/pharmer/apis/v1beta1/digitalocean"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
@@ -22,7 +24,7 @@ func (cm *ClusterManager) GetDefaultMachineProviderSpec(cluster *api.Cluster, sk
 		sku = "2gb"
 	}
 	config := cluster.Spec.Config
-	spec := &api.DigitalOceanMachineProviderConfig{
+	spec := &doCapi.DigitalOceanMachineProviderSpec{
 		Region: config.Cloud.Region,
 		Size:   sku,
 		Image:  config.Cloud.InstanceImage,
@@ -59,13 +61,9 @@ func (cm *ClusterManager) SetDefaultCluster(cluster *api.Cluster, config *api.Cl
 	}
 	config.Cloud.Region = config.Cloud.Zone
 	config.Cloud.SSHKeyName = n.GenSSHKeyExternalID()
-	//cluster.Spec.API.BindPort = kubeadmapi.DefaultAPIBindPort
-	config.Cloud.InstanceImage = "ubuntu-16-04-x64"
+	config.Cloud.InstanceImage = "ubuntu-18-04-x64"
 
-	//cluster.InitializeClusterApi()
 	cluster.SetNetworkingDefaults(config.Cloud.NetworkProvider)
-
-	//kube.Spec.AuthorizationModes = strings.Split(kubeadmapi.DefaultAuthorizationModes, ",")
 	config.APIServerCertSANs = NameGenerator(cm.ctx).ExtraNames(cluster.Name)
 	config.APIServerExtraArgs = map[string]string{
 		// ref: https://github.com/kubernetes/kubernetes/blob/d595003e0dc1b94455d1367e96e15ff67fc920fa/cmd/kube-apiserver/app/options/options.go#L99
@@ -81,11 +79,34 @@ func (cm *ClusterManager) SetDefaultCluster(cluster *api.Cluster, config *api.Cl
 	cluster.Status = api.PharmerClusterStatus{
 		Phase: api.ClusterPending,
 	}
+	cm.cluster = cluster
 
 	// add provider config to cluster
-	return cluster.SetDigitalOceanProviderConfig(cluster.Spec.ClusterAPI, config)
+	return cm.SetClusterProviderConfig()
 }
 
+func (cm *ClusterManager) SetClusterProviderConfig() error {
+	conf := &doCapi.DigitalOceanClusterProviderSpec{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: api.DigitalOceanProviderGroupName + "/" + api.DigitalOceanProviderApiVersion,
+			Kind:       api.DigitalOceanProviderKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: cm.cluster.Name,
+		},
+	}
+
+	rawSpec, err := doCapi.EncodeClusterSpec(conf)
+	if err != nil {
+		return err
+	}
+
+	cm.cluster.Spec.ClusterAPI.Spec.ProviderSpec.Value = rawSpec
+
+	return nil
+}
+
+// IsValid TODO: Add Description
 func (cm *ClusterManager) IsValid(cluster *api.Cluster) (bool, error) {
 	return false, ErrNotImplemented
 }

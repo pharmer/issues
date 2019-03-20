@@ -19,11 +19,11 @@ import (
 	"fmt"
 
 	"github.com/ghodss/yaml"
-	api "github.com/pharmer/pharmer/apis/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	//kubeadmconsts "k8s.io/kubernetes/cmd/kubeadm/app/constants"
+	doCapi "github.com/pharmer/pharmer/apis/v1beta1/digitalocean"
 	"sigs.k8s.io/cluster-api/pkg/kubeadm"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -145,7 +145,7 @@ func (do *MachineActuator) Create(_ context.Context, cluster *clusterv1.Cluster,
 	return nil
 }
 
-func (do *MachineActuator) validateMachine(providerConfig *api.DigitalOceanMachineProviderConfig) error {
+func (do *MachineActuator) validateMachine(providerConfig *doCapi.DigitalOceanMachineProviderSpec) error {
 	if len(providerConfig.Image) == 0 {
 		return errors.New("image slug must be provided")
 	}
@@ -172,8 +172,8 @@ func (do *MachineActuator) getKubeadmToken() (string, error) {
 	return strings.TrimSpace(token), nil
 }
 
-func machineProviderFromProviderSpec(providerSpec clusterv1.ProviderSpec) (*api.DigitalOceanMachineProviderConfig, error) {
-	var config api.DigitalOceanMachineProviderConfig
+func machineProviderFromProviderSpec(providerSpec clusterv1.ProviderSpec) (*doCapi.DigitalOceanMachineProviderSpec, error) {
+	var config doCapi.DigitalOceanMachineProviderSpec
 	if err := yaml.Unmarshal(providerSpec.Value.Raw, &config); err != nil {
 		return nil, err
 	}
@@ -301,9 +301,9 @@ func (do *MachineActuator) Exists(ctx context.Context, cluster *clusterv1.Cluste
 				},
 			}
 		}
-		if err = api.SetDigitalOceanClusterProviderStatus(cluster); err != nil {
-			return false, err
-		}
+		//if err = doCapi.SetDigitalOceanClusterProviderStatus(cluster); err != nil {
+		//	return false, err
+		//}
 		if err = do.client.Status().Update(ctx, cluster); err != nil {
 			return false, err
 		}
