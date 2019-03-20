@@ -19,7 +19,7 @@ import (
 func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clusterv1.Machine, token string) TemplateData {
 	td := TemplateData{
 		ClusterName:       cluster.Name,
-		KubernetesVersion: machine.Spec.Versions.ControlPlane,
+		KubernetesVersion: machine.Spec.Versions.Kubelet,
 		KubeadmToken:      token,
 		CAHash:            pubkeypin.Hash(CACert(ctx)),
 		CAKey:             string(cert.EncodePrivateKeyPEM(CAKey(ctx))),
@@ -48,10 +48,6 @@ func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clu
 	}
 	joinConf, _ := td.JoinConfigurationYAML()
 	td.JoinConfiguration = joinConf
-
-	if machine.Spec.Versions.ControlPlane == "" {
-		td.KubernetesVersion = machine.Spec.Versions.Kubelet
-	}
 
 	return td
 }
