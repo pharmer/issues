@@ -195,7 +195,6 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			Message:  fmt.Sprintf("Master instance %s will be created", masterMachine.Name),
 		})
 		if !dryRun {
-			//var masterServer *api.NodeInfo
 			nodeAddresses := []core.NodeAddress{
 				{
 					Type:    core.NodeExternalDNS,
@@ -208,19 +207,6 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 				return
 			}
 
-			//if masterServer.PrivateIP != "" {
-			//	nodeAddresses = append(nodeAddresses, core.NodeAddress{
-			//		Type:    core.NodeInternalIP,
-			//		Address: masterServer.PrivateIP,
-			//	})
-			//}
-			//
-			//if masterServer.PublicIP != "" {
-			//	nodeAddresses = append(nodeAddresses, core.NodeAddress{
-			//		Type:    core.NodeExternalIP,
-			//		Address: masterServer.PublicIP,
-			//	})
-			//}
 			if err = cm.cluster.SetClusterApiEndpoints(nodeAddresses); err != nil {
 				return
 			}

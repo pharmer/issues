@@ -288,26 +288,6 @@ func (do *MachineActuator) Exists(ctx context.Context, cluster *clusterv1.Cluste
 	if err != nil {
 		return false, nil
 	}
-	if util.IsControlPlaneMachine(machine) {
-		publicIP, err := i.PublicIPv4()
-		if err != nil {
-			return false, err
-		}
-		if publicIP != "" {
-			cluster.Status.APIEndpoints = []clusterv1.APIEndpoint{
-				{
-					Host: publicIP,
-					Port: 6443,
-				},
-			}
-		}
-		//if err = doCapi.SetDigitalOceanClusterProviderStatus(cluster); err != nil {
-		//	return false, err
-		//}
-		if err = do.client.Status().Update(ctx, cluster); err != nil {
-			return false, err
-		}
-	}
 
 	return i != nil, nil
 }

@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
+	"sigs.k8s.io/cluster-api/pkg/util"
 )
 
 var errLBNotFound = errors.New("loadbalancer not found")
@@ -27,6 +28,7 @@ type cloudConnector struct {
 	ctx     context.Context
 	cluster *api.Cluster
 	client  *godo.Client
+	namer   namer
 }
 
 var _ InstanceManager = &cloudConnector{}
@@ -98,6 +100,7 @@ func PrepareCloud(ctx context.Context, clusterName, owner string) (*cloudConnect
 	if conn, err = NewConnector(ctx, cluster, owner); err != nil {
 		return nil, err
 	}
+	conn.namer = namer{cluster}
 	//cm.namer = namer{cluster: cm.cluster}
 	return conn, nil
 }
@@ -263,16 +266,19 @@ func (conn *cloudConnector) CreateInstance(cluster *api.Cluster, machine *cluste
 		Image:  godo.DropletCreateImage{Slug: machineConfig.Image},
 		SSHKeys: []godo.DropletCreateSSHKey{
 			{Fingerprint: SSHKey(conn.ctx).OpensshFingerprint},
-			{Fingerprint: "0d:ff:0d:86:0c:f1:47:1d:85:67:1e:73:c6:0e:46:17"}, // tamal@beast
-			{Fingerprint: "c0:19:c1:81:c5:2e:6d:d9:a6:db:3c:f5:c5:fd:c8:1d"}, // tamal@mbp
-			{Fingerprint: "f6:66:c5:ad:e6:60:30:d9:ab:2c:7c:75:56:e2:d7:f3"}, // tamal@asus
-			{Fingerprint: "80:b6:5a:c8:92:db:aa:fe:5f:d0:2e:99:95:de:ae:ab"}, // sanjid
-			{Fingerprint: "93:e6:c6:95:5c:d1:ac:00:5e:23:8c:f7:d2:61:b7:07"}, // dipta
 		},
 		PrivateNetworking: true,
 		IPv6:              false,
 		UserData:          script,
+		Tags: []string{
+			"KubernetesCluster:" + cluster.Name,
+		},
 	}
+
+	if util.IsControlPlaneMachine(machine) {
+		req.Tags = append(req.Tags, cluster.Name+"-master")
+	}
+
 	if Env(conn.ctx).IsPublic() {
 		req.SSHKeys = []godo.DropletCreateSSHKey{
 			{Fingerprint: SSHKey(conn.ctx).OpensshFingerprint},
@@ -285,9 +291,6 @@ func (conn *cloudConnector) CreateInstance(cluster *api.Cluster, machine *cluste
 	Logger(conn.ctx).Infof("Droplet %v created", host.Name)
 
 	if err = conn.WaitForInstance(host.ID, "active"); err != nil {
-		return nil, err
-	}
-	if err = conn.applyTag(host.ID); err != nil {
 		return nil, err
 	}
 
@@ -485,8 +488,8 @@ func (conn *cloudConnector) buildLoadBalancerRequest(lbName string) (*godo.LoadB
 		StickySessions:      stickySessions,
 		Algorithm:           algorithm,
 		RedirectHttpToHttps: false, //redirectHttpToHttps,
-		Tag:                 "KubernetesCluster:" + conn.cluster.Name,
-		Tags:                []string{"KubernetesCluster:" + conn.cluster.Name},
+		Tag:                 conn.cluster.Name + "-master",
+		Tags:                []string{conn.cluster.Name + "-master"},
 	}, nil
 }
 
