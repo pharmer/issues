@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	. "github.com/appscode/go/context"
+	"github.com/appscode/go/log"
 	"github.com/digitalocean/godo"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
+	doCapi "github.com/pharmer/pharmer/apis/v1beta1/digitalocean"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pharmer/pharmer/credential"
 	"github.com/pkg/errors"
@@ -255,7 +258,7 @@ func (conn *cloudConnector) CreateInstance(cluster *api.Cluster, machine *cluste
 	fmt.Println(script)
 	fmt.Println()
 
-	machineConfig, err := machineProviderFromProviderSpec(machine.Spec.ProviderSpec)
+	machineConfig, err := doCapi.MachineConfigFromProviderSpec(machine.Spec.ProviderSpec)
 	if err != nil {
 		return nil, err
 	}
@@ -491,6 +494,35 @@ func (conn *cloudConnector) buildLoadBalancerRequest(lbName string) (*godo.LoadB
 		Tag:                 conn.cluster.Name + "-master",
 		Tags:                []string{conn.cluster.Name + "-master"},
 	}, nil
+}
+
+func (conn *cloudConnector) loadBalancerUpdated(lb *godo.LoadBalancer) (bool, error) {
+	defaultSpecs, err := conn.buildLoadBalancerRequest(conn.namer.LoadBalancerName())
+	if err != nil {
+		log.Debugln("Error getting default lb specs")
+		return false, err
+	}
+
+	if lb.Algorithm != defaultSpecs.Algorithm {
+		return true, nil
+	}
+	if lb.Region.Slug != defaultSpecs.Region {
+		return true, nil
+	}
+	if !reflect.DeepEqual(lb.ForwardingRules, defaultSpecs.ForwardingRules) {
+		return true, nil
+	}
+	if !reflect.DeepEqual(lb.HealthCheck, defaultSpecs.HealthCheck) {
+		return true, nil
+	}
+	if !reflect.DeepEqual(lb.StickySessions, defaultSpecs.StickySessions) {
+		return true, nil
+	}
+	if lb.RedirectHttpToHttps != defaultSpecs.RedirectHttpToHttps {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (conn *cloudConnector) waitActive(lbID string) (*godo.LoadBalancer, error) {

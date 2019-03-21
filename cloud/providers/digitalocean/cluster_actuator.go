@@ -2,7 +2,6 @@ package digitalocean
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/appscode/go/log"
 	doCapi "github.com/pharmer/pharmer/apis/v1beta1/digitalocean"
@@ -88,39 +87,23 @@ func (a *ClusterActuator) Reconcile(cluster *clusterapi.Cluster) error {
 		return err
 	}
 
-	// now check load balancer specs
-	defaultSpecs, err := a.conn.buildLoadBalancerRequest(a.conn.namer.LoadBalancerName())
+	updated, err := a.conn.loadBalancerUpdated(lb)
 	if err != nil {
-		log.Debugln("error getting default lb specs")
 		return err
 	}
 
-	updateRequired := false
+	if updated {
+		log.Infoln("Load balancer specs changed, updating lb")
 
-	if lb.Algorithm != defaultSpecs.Algorithm {
-		updateRequired = true
-	}
-	if lb.Region.Slug != defaultSpecs.Region {
-		updateRequired = true
-	}
-	if !reflect.DeepEqual(lb.ForwardingRules, defaultSpecs.ForwardingRules) {
-		updateRequired = true
-	}
-	if !reflect.DeepEqual(lb.HealthCheck, defaultSpecs.HealthCheck) {
-		updateRequired = true
-	}
-	if !reflect.DeepEqual(lb.StickySessions, defaultSpecs.StickySessions) {
-		updateRequired = true
-	}
-	if lb.RedirectHttpToHttps != defaultSpecs.RedirectHttpToHttps {
-		updateRequired = true
-	}
+		defaultSpecs, err := a.conn.buildLoadBalancerRequest(a.conn.namer.LoadBalancerName())
+		if err != nil {
+			log.Debugln("Error getting default lb specs")
+			return err
+		}
 
-	if updateRequired {
-		log.Infoln("load balancer specs changed, updating lb")
 		lb, _, err = a.conn.client.LoadBalancers.Update(context.Background(), lb.ID, defaultSpecs)
 		if err != nil {
-			log.Debugln("error updating load balancer", err)
+			log.Debugln("Error updating load balancer", err)
 			return err
 		}
 	}
@@ -130,7 +113,12 @@ func (a *ClusterActuator) Reconcile(cluster *clusterapi.Cluster) error {
 		log.Debugln("Error getting provider status", err)
 		return err
 	}
-	status.APIServerLB = lb
+	status.APIServerLB = doCapi.DescribeLoadBalancer(lb)
+
+	if err := a.updateClusterStatus(cluster, status); err != nil {
+		log.Debugf("Error updating cluster status for cluster %q", cluster.Name)
+		return err
+	}
 
 	log.Infoln("Reconciled cluster successfully")
 	return nil
@@ -140,4 +128,15 @@ func (a *ClusterActuator) Delete(cluster *clusterapi.Cluster) error {
 	log.Infoln("Delete cluster not implemented")
 
 	return nil
+}
+
+func (a *ClusterActuator) updateClusterStatus(cluster *clusterapi.Cluster, status *doCapi.DigitalOceanClusterProviderStatus) error {
+	raw, err := doCapi.EncodeClusterStatus(status)
+	if err != nil {
+		log.Debugf("Error encoding cluster status for cluster %q", cluster.Name)
+		return err
+	}
+
+	cluster.Status.ProviderStatus = raw
+	return a.client.Status().Update(a.ctx, cluster)
 }
