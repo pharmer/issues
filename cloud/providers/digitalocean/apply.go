@@ -175,7 +175,10 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		})
 	}
 
-	cm.cluster.Status.Cloud.LoadBalancer = lb.IP
+	cm.cluster.Status.Cloud.LoadBalancer = api.LoadBalancer{
+		IP:   lb.IP,
+		Port: lb.ForwardingRules[0].EntryPort,
+	}
 
 	// -------------------------------------------------------------------ASSETS
 	var machines []*clusterv1.Machine
@@ -197,11 +200,18 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			Message:  fmt.Sprintf("Master instance %s will be created", masterMachine.Name),
 		})
 		if !dryRun {
-			nodeAddresses := []core.NodeAddress{
-				{
+			nodeAddresses := make([]core.NodeAddress, 0)
+
+			if cm.cluster.Status.Cloud.LoadBalancer.DNS != "" {
+				nodeAddresses = append(nodeAddresses, core.NodeAddress{
 					Type:    core.NodeExternalDNS,
-					Address: cm.cluster.Status.Cloud.LoadBalancer,
-				},
+					Address: cm.cluster.Status.Cloud.LoadBalancer.DNS,
+				})
+			} else if cm.cluster.Status.Cloud.LoadBalancer.IP != "" {
+				nodeAddresses = append(nodeAddresses, core.NodeAddress{
+					Type:    core.NodeExternalIP,
+					Address: cm.cluster.Status.Cloud.LoadBalancer.IP,
+				})
 			}
 
 			_, err = cm.conn.CreateInstance(cm.cluster, masterMachine, "")

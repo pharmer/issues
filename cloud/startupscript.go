@@ -2,13 +2,14 @@ package cloud
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/appscode/go-version"
 	"github.com/ghodss/yaml"
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta1"
@@ -242,6 +243,16 @@ func (td TemplateData) PrekVersion() (string, error) {
 		return "", errors.Errorf("pre-k version is unknown for Kubernetes version %s", td.KubernetesVersion)
 	}
 	return prekVer, nil
+}
+
+func (td *TemplateData) ControlPlaneEndpointsFromLB(cfg *kubeadmapi.ClusterConfiguration, cluster *api.Cluster) {
+	if cluster.Status.Cloud.LoadBalancer.DNS != "" {
+		cfg.ControlPlaneEndpoint = fmt.Sprintf("%s:%d", cluster.Status.Cloud.LoadBalancer.DNS, cluster.Status.Cloud.LoadBalancer.Port)
+		cfg.APIServer.CertSANs = append(cfg.APIServer.CertSANs, cluster.Status.Cloud.LoadBalancer.DNS)
+	} else if cluster.Status.Cloud.LoadBalancer.IP != "" {
+		cfg.ControlPlaneEndpoint = fmt.Sprintf("%s:%d", cluster.Status.Cloud.LoadBalancer.IP, cluster.Status.Cloud.LoadBalancer.Port)
+		cfg.APIServer.CertSANs = append(cfg.APIServer.CertSANs, cluster.Status.Cloud.LoadBalancer.IP)
+	}
 }
 
 var (

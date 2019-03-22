@@ -3,7 +3,6 @@ package digitalocean
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
@@ -100,10 +99,7 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *c
 		ClusterName: cluster.Name,
 	}
 
-	if cluster.Status.Cloud.LoadBalancer != "" {
-		cfg.ControlPlaneEndpoint = fmt.Sprintf("%s:%s", cluster.Status.Cloud.LoadBalancer, "6443")
-		cfg.APIServer.CertSANs = append(cfg.APIServer.CertSANs, cluster.Status.Cloud.LoadBalancer)
-	}
+	td.ControlPlaneEndpointsFromLB(&cfg, cluster)
 
 	if token != "" {
 		td.ControlPlaneJoin = true
@@ -116,7 +112,6 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *c
 	}
 
 	td.ClusterConfiguration = &cfg
-
 	return td
 }
 

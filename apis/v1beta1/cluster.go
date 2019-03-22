@@ -190,7 +190,13 @@ type CloudStatus struct {
 	AWS              *AWSStatus   `json:"aws,omitempty" protobuf:"bytes,2,opt,name=aws"`
 	EKS              *EKSStatus   `json:"eks,omitempty" protobuf:"bytes,2,opt,name=eks"`
 	Azure            *AzureStatus `json:"azure,omitempty"`
-	LoadBalancer     string       `json:"loadBalancer,omitempty"`
+	LoadBalancer     LoadBalancer `json:"loadBalancer,omitempty"`
+}
+
+type LoadBalancer struct {
+	DNS  string `json:"dns"`
+	IP   string `json:"ip"`
+	Port int    `json:"port"`
 }
 
 // Depricated
