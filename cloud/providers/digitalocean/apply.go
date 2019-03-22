@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	semver "github.com/appscode/go-version"
+	"github.com/appscode/go/log"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/clusterdeployer/clusterclient"
 
 	//"context"
@@ -183,7 +184,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		return
 	}
 
-	masterMachine, err := api.GetMasterMachine(machines)
+	masterMachine, err := api.GetLeaderMachine(machines)
 	if err != nil {
 		return
 	}
@@ -246,6 +247,19 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 	}
 	if err := ca.Apply(ControllerManager); err != nil {
 		return acts, err
+	}
+
+	log.Infof("Adding other master machines")
+	client, err := GetClusterClient(cm.ctx, cm.cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(machines); i++ {
+		if _, err := client.ClusterV1alpha1().Machines(cm.cluster.Spec.ClusterAPI.Namespace).Create(machines[i]); err != nil {
+			log.Infof("Error creating maching %q in namespace %q", machines[i].Name, cm.cluster.Spec.ClusterAPI.Namespace)
+			return acts, err
+		}
 	}
 
 	cm.cluster.Status.Phase = api.ClusterReady

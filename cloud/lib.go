@@ -78,20 +78,21 @@ func Create(ctx context.Context, cluster *api.Cluster, owner string) (*api.Clust
 	}
 
 	if !managedProviders.Has(cluster.ClusterConfig().Cloud.CloudProvider) {
-		master, err := CreateMasterMachines(ctx, cluster)
-		if err != nil {
-			return nil, err
-		}
-		if _, err = Store(ctx).Owner(owner).Machine(cluster.Name).Create(master); err != nil {
-			return nil, err
+		for i := 0; i < cluster.Spec.Config.MasterCount; i++ {
+			master, err := CreateMasterMachines(ctx, cluster, i)
+			if err != nil {
+				return nil, err
+			}
+			if _, err = Store(ctx).Owner(owner).Machine(cluster.Name).Create(master); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	return Store(ctx).Owner(owner).Clusters().Update(cluster)
-
 }
 
-func CreateMasterMachines(ctx context.Context, cluster *api.Cluster) (*clusterapi.Machine, error) {
+func CreateMasterMachines(ctx context.Context, cluster *api.Cluster, index int) (*clusterapi.Machine, error) {
 	cm, err := GetCloudManager(cluster.ClusterConfig().Cloud.CloudProvider, ctx)
 	if err != nil {
 		return nil, err
@@ -107,7 +108,7 @@ func CreateMasterMachines(ctx context.Context, cluster *api.Cluster) (*clusterap
 	}*/
 	machine := &clusterapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%v-master", cluster.Name),
+			Name: fmt.Sprintf("%v-master-%v", cluster.Name, index),
 			//	UID:               uuid.NewUUID(),
 			CreationTimestamp: metav1.Time{Time: time.Now()},
 			Labels: map[string]string{

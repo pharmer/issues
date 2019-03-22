@@ -163,7 +163,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		return
 	}
 	var masterMachine *clusterv1.Machine
-	masterMachine, err = api.GetMasterMachine(machines)
+	masterMachine, err = api.GetLeaderMachine(machines)
 	if err != nil {
 		return
 	}
@@ -410,7 +410,7 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 		return
 	}
 	var masterMachine *clusterv1.Machine
-	masterMachine, err = api.GetMasterMachine(machines)
+	masterMachine, err = api.GetLeaderMachine(machines)
 	if err != nil {
 		return
 	}

@@ -118,7 +118,7 @@ func (ca *ClusterApi) Apply(controllerManager string) error {
 		return err
 	}
 
-	masterMachine, err := api.GetMasterMachine(machines)
+	masterMachine, err := api.GetLeaderMachine(machines)
 	if err != nil {
 		return err
 	}

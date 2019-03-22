@@ -7,7 +7,6 @@ import (
 
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
-	"github.com/the-redback/go-oneliners"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/cert"
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta1"
@@ -113,7 +112,6 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *c
 		if err != nil {
 			panic(err)
 		}
-		oneliners.PrettyJson(joinConf)
 		td.JoinConfiguration = joinConf
 	}
 

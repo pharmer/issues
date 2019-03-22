@@ -75,15 +75,15 @@ type MachineProviderConfig struct {
 	Config NodeSpec `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
 }
 
-func GetMasterMachine(machines []*clusterapi.Machine) (*clusterapi.Machine, error) {
+func GetLeaderMachine(machines []*clusterapi.Machine) (*clusterapi.Machine, error) {
 	masters := []*clusterapi.Machine{}
 	for _, machine := range machines {
 		if util.IsControlPlaneMachine(machine) {
 			masters = append(masters, machine)
 		}
 	}
-	if len(masters) != 1 {
-		return nil, fmt.Errorf("expected one master, got: %v", len(masters))
+	if len(masters) == 0 {
+		return nil, fmt.Errorf("Expected at least one master, got 0")
 	}
 	return masters[0], nil
 }

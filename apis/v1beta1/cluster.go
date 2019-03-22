@@ -34,6 +34,7 @@ type PharmerClusterSpec struct {
 }
 
 type ClusterConfig struct {
+	MasterCount          int       `json:"masterCount"`
 	Cloud                CloudSpec `json:"cloud" protobuf:"bytes,1,opt,name=cloud"`
 	KubernetesVersion    string    `json:"kubernetesVersion,omitempty" protobuf:"bytes,4,opt,name=kubernetesVersion"`
 	Locked               bool      `json:"locked,omitempty" protobuf:"varint,5,opt,name=locked"`
