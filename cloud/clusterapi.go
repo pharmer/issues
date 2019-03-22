@@ -109,9 +109,9 @@ func (ca *ClusterApi) Apply(controllerManager string) error {
 		return err
 	}
 
-	//if err := ca.updateProviderStatus(); err != nil {
-	//	return err
-	//}
+	if err := ca.updateProviderStatus(); err != nil {
+		return err
+	}
 
 	machines, err := Store(ca.ctx).Owner(ca.Owner).Machine(ca.cluster.Name).List(metav1.ListOptions{})
 	if err != nil {
@@ -237,18 +237,18 @@ func (ca *ClusterApi) CreatePharmerSecret() error {
 		"ca.key":             cert.EncodePrivateKeyPEM(CAKey(ca.ctx)),
 		"front-proxy-ca.crt": cert.EncodeCertPEM(FrontProxyCACert(ca.ctx)),
 		"front-proxy-ca.key": cert.EncodePrivateKeyPEM(FrontProxyCAKey(ca.ctx)),
-		//"sa.crt":             cert.EncodeCertPEM(SaCert(ca.ctx)),
-		//"sa.key":             cert.EncodePrivateKeyPEM(SaKey(ca.ctx)),
+		"sa.crt":             cert.EncodeCertPEM(SaCert(ca.ctx)),
+		"sa.key":             cert.EncodePrivateKeyPEM(SaKey(ca.ctx)),
 	}); err != nil {
 		return err
 	}
 
-	/*if err = CreateSecret(ca.kc, "pharmer-etcd", map[string][]byte{
+	if err = CreateSecret(ca.kc, "pharmer-etcd", ca.namespace, map[string][]byte{
 		"ca.crt": cert.EncodeCertPEM(EtcdCaCert(ca.ctx)),
 		"ca.key": cert.EncodePrivateKeyPEM(EtcdCaKey(ca.ctx)),
 	}); err != nil {
 		return err
-	}*/
+	}
 
 	return nil
 }
