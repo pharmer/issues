@@ -155,7 +155,7 @@ func (s *nodeGroupFileStore) Delete(name string) error {
 
 	item, err := s.container.Item(resourceID)
 	if err != nil {
-		return errors.Errorf("failed to get item %s. Reason: %v", item.Name(), err)
+		return errors.Errorf("failed to get item %s. Reason: %v", name, err)
 	}
 
 	return s.container.RemoveItem(item.ID())

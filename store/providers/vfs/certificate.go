@@ -126,7 +126,7 @@ func (s *certificateFileStore) Delete(name string) error {
 	certID := s.certID(name)
 	certItem, err := s.container.Item(certID)
 	if err != nil {
-		return errors.Errorf("failed to get item %s. Reason: %v", certItem.Name(), err)
+		return errors.Errorf("failed to get item %s. Reason: %v", name, err)
 	}
 
 	if err := s.container.RemoveItem(certItem.ID()); err != nil {
@@ -136,7 +136,7 @@ func (s *certificateFileStore) Delete(name string) error {
 	keyID := s.keyID(name)
 	keyItem, err := s.container.Item(keyID)
 	if err != nil {
-		return errors.Errorf("failed to get item %s. Reason: %v", keyItem.Name(), err)
+		return errors.Errorf("failed to get item %s. Reason: %v", name, err)
 	}
 
 	if err := s.container.RemoveItem(keyItem.ID()); err != nil {

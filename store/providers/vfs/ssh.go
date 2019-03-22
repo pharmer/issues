@@ -113,7 +113,7 @@ func (s *sshKeyFileStore) Delete(name string) error {
 	pubKeyID := s.pubKeyID(name)
 	pubKeyItem, err := s.container.Item(pubKeyID)
 	if err != nil {
-		return errors.Errorf("failed to get item %s. Reason: %v", pubKeyItem.Name(), err)
+		return errors.Errorf("failed to get item %s. Reason: %v", name, err)
 	}
 
 	if err := s.container.RemoveItem(pubKeyItem.ID()); err != nil {
@@ -123,7 +123,7 @@ func (s *sshKeyFileStore) Delete(name string) error {
 	privKeyID := s.privKeyID(name)
 	privKeyItem, err := s.container.Item(privKeyID)
 	if err != nil {
-		return errors.Errorf("failed to get item %s. Reason: %v", privKeyItem.Name(), err)
+		return errors.Errorf("failed to get item %s. Reason: %v", name, err)
 	}
 
 	err = s.container.RemoveItem(privKeyItem.ID())
