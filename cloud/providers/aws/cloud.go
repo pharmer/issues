@@ -51,18 +51,18 @@ type cloudConnector struct {
 
 var _ ClusterApiProviderComponent = &cloudConnector{}
 
-func NewConnector(ctx context.Context, cluster *api.Cluster, owner string) (*cloudConnector, error) {
-	cred, err := Store(ctx).Owner(owner).Credentials().Get(cluster.Spec.Config.CredentialName)
+func NewConnector(cm *ClusterManager) (*cloudConnector, error) {
+	cred, err := Store(cm.ctx).Owner(cm.owner).Credentials().Get(cm.cluster.Spec.Config.CredentialName)
 	if err != nil {
 		return nil, err
 	}
 	typed := credential.AWS{CommonSpec: credential.CommonSpec(cred.Spec)}
 	if ok, err := typed.IsValid(); !ok {
-		return nil, errors.Errorf("credential %s is invalid. Reason: %v", cluster.Spec.Config.CredentialName, err)
+		return nil, errors.Errorf("credential %s is invalid. Reason: %v", cm.cluster.Spec.Config.CredentialName, err)
 	}
 
 	config := &_aws.Config{
-		Region:      &cluster.Spec.Config.Cloud.Region,
+		Region:      &cm.cluster.Spec.Config.Cloud.Region,
 		Credentials: credentials.NewStaticCredentials(typed.AccessKeyID(), typed.SecretAccessKey(), ""),
 	}
 	sess, err := session.NewSession(config)
@@ -70,18 +70,42 @@ func NewConnector(ctx context.Context, cluster *api.Cluster, owner string) (*clo
 		return nil, err
 	}
 	conn := cloudConnector{
-		ctx:       ctx,
-		cluster:   cluster,
+		ctx:       cm.ctx,
+		cluster:   cm.cluster,
 		ec2:       _ec2.New(sess),
 		elb:       _elb.New(sess),
 		iam:       _iam.New(sess),
 		autoscale: autoscaling.New(sess),
 		s3:        _s3.New(sess),
+		namer:     cm.namer,
 	}
 	if ok, msg := conn.IsUnauthorized(); !ok {
-		return nil, errors.Errorf("credential %s does not have necessary authorization. Reason: %s", cluster.Spec.Config.CredentialName, msg)
+		return nil, errors.Errorf("credential %s does not have necessary authorization. Reason: %s", cm.cluster.Spec.Config.CredentialName, msg)
 	}
 	return &conn, nil
+}
+
+func PrepareCloud(cm *ClusterManager) error {
+	var err error
+
+	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
+	}
+	if cm.ctx, err = LoadEtcdCertificate(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
+	}
+	if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
+	}
+	if cm.ctx, err = LoadSaKey(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
+	}
+
+	if cm.conn, err = NewConnector(cm); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Returns true if unauthorized
@@ -471,19 +495,19 @@ func (conn *cloudConnector) addTag(id string, key string, value string) error {
 	return nil
 }
 
-func (conn *cloudConnector) getLoadBalancer() (bool, error) {
+func (conn *cloudConnector) getLoadBalancer() (string, error) {
 	input := &elb.DescribeLoadBalancersInput{
 		LoadBalancerNames: aws.StringSlice([]string{fmt.Sprintf("%s-apiserver", conn.cluster.Name)}),
 	}
 	out, err := conn.elb.DescribeLoadBalancers(input)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	if len(out.LoadBalancerDescriptions) == 0 {
-		return false, nil
+		return "", nil
 	}
-	conn.cluster.Status.Cloud.AWS.LBDNS = *out.LoadBalancerDescriptions[0].DNSName
-	return true, nil
+
+	return *out.LoadBalancerDescriptions[0].DNSName, nil
 }
 
 func (conn *cloudConnector) deleteLoadBalancer() (bool, error) {
@@ -495,18 +519,18 @@ func (conn *cloudConnector) deleteLoadBalancer() (bool, error) {
 	}
 
 	if err := wait.PollImmediate(RetryInterval, RetryTimeout, func() (bool, error) {
-		found, err := conn.getLoadBalancer()
+		_, err := conn.getLoadBalancer()
 		if strings.Contains(err.Error(), "LoadBalancerNotFound") {
 			return true, nil
 		}
-		return !found, nil
+		return false, nil
 	}); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (conn *cloudConnector) setupLoadBalancer(publicSubnetID string) error {
+func (conn *cloudConnector) setupLoadBalancer(publicSubnetID string) (string, error) {
 	input := elb.CreateLoadBalancerInput{
 		LoadBalancerName: StringP(fmt.Sprintf("%s-apiserver", conn.cluster.Name)),
 		Subnets:          []*string{StringP(publicSubnetID)},
@@ -538,7 +562,7 @@ func (conn *cloudConnector) setupLoadBalancer(publicSubnetID string) error {
 
 	output, err := conn.elb.CreateLoadBalancer(&input)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	hc := &elb.ConfigureHealthCheckInput{
@@ -553,12 +577,10 @@ func (conn *cloudConnector) setupLoadBalancer(publicSubnetID string) error {
 	}
 
 	if _, err := conn.elb.ConfigureHealthCheck(hc); err != nil {
-		return err
+		return "", err
 	}
 
-	conn.cluster.Status.Cloud.AWS.LBDNS = *output.DNSName
-
-	return nil
+	return *output.DNSName, nil
 }
 
 func (conn *cloudConnector) getSubnet(vpcID, privacy string) (string, bool, error) {
@@ -1459,19 +1481,6 @@ func (conn *cloudConnector) startMaster(machine *clusterv1.Machine, sku, private
 		Name:       *r.Reservations[0].Instances[0].PrivateDnsName,
 		ExternalID: *masterInstance.InstanceId,
 	}
-
-	// Don't reassign internal_ip for AWS to keep the fixed 172.20.0.9 for master_internal_ip
-	var publicIP, privateIP string
-	if *r.Reservations[0].Instances[0].State.Name != "running" {
-		publicIP = ""
-		privateIP = ""
-	} else {
-		publicIP = conn.cluster.Status.Cloud.AWS.LBDNS
-		privateIP = *r.Reservations[0].Instances[0].PrivateIpAddress
-	}
-
-	node.PublicIP = publicIP
-	node.PrivateIP = privateIP
 
 	return &node, nil
 }
