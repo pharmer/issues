@@ -109,9 +109,15 @@ func (do *MachineActuator) Create(ctx context.Context, cluster *clusterv1.Cluste
 		return err
 	}
 
-	_, err = do.conn.CreateInstance(machine.Name, token, machine, do.owner)
+	server, err := do.conn.CreateInstance(machine.Name, token, machine, do.owner)
 	if err != nil {
 		return err
+	}
+
+	if util.IsControlPlaneMachine(machine) {
+		if err = do.conn.addNodeToBalancer(do.conn.namer.LoadBalancerName(), machine.Name, server.PrivateIP); err != nil {
+			return err
+		}
 	}
 
 	if do.client != nil {
@@ -121,7 +127,7 @@ func (do *MachineActuator) Create(ctx context.Context, cluster *clusterv1.Cluste
 	return nil
 }
 
-func (do *MachineActuator) validateMachine(providerConfig *linodeconfig.LinodeMachineProviderConfig) error {
+func (do *MachineActuator) validateMachine(providerConfig *linodeconfig.LinodeMachineProviderSpec) error {
 	if len(providerConfig.Image) == 0 {
 		return errors.New("image slug must be provided")
 	}
@@ -148,8 +154,8 @@ func (do *MachineActuator) getKubeadmToken() (string, error) {
 	return strings.TrimSpace(token), nil
 }
 
-func machineProviderFromProviderSpec(providerSpec clusterv1.ProviderSpec) (*linodeconfig.LinodeMachineProviderConfig, error) {
-	var config linodeconfig.LinodeMachineProviderConfig
+func machineProviderFromProviderSpec(providerSpec clusterv1.ProviderSpec) (*linodeconfig.LinodeMachineProviderSpec, error) {
+	var config linodeconfig.LinodeMachineProviderSpec
 	if err := yaml.Unmarshal(providerSpec.Value.Raw, &config); err != nil {
 		return nil, err
 	}

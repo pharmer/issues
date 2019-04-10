@@ -43,7 +43,7 @@ type ApiServerTemplate struct {
 	ClusterOwner        string
 }
 
-var MachineControllerImage = "pharmer/machine-controller:platform"
+var MachineControllerImage = "pharmer/machine-controller:linode-ha"
 
 const (
 	BasePath = ".pharmer/config.d"
