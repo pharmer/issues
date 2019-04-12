@@ -337,8 +337,9 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 	} else if err == nil {
 		for _, mi := range nodeInstances.Items {
 
-			err = cm.conn.DeleteStackScript(mi.Name, api.RoleNode)
-			fmt.Println(err)
+			if err = cm.conn.DeleteStackScript(mi.Name, api.RoleNode); err != nil {
+				Logger(cm.ctx).Infof("Reason: %v", err)
+			}
 			err = kc.CoreV1().Nodes().Delete(mi.Name, nil)
 			if err != nil {
 				Logger(cm.ctx).Infof("Failed to delete node %s. Reason: %s", mi.Name, err)
@@ -362,8 +363,10 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 		})
 		if !dryRun {
 			for _, mi := range masterInstances.Items {
-				err = cm.conn.DeleteStackScript(mi.Name, api.RoleMaster)
-				fmt.Println(err)
+				if err = cm.conn.DeleteStackScript(mi.Name, api.RoleMaster); err != nil {
+					Logger(cm.ctx).Infof("Reason: %v", err)
+				}
+
 				err = cm.conn.DeleteInstanceByProviderID(mi.Spec.ProviderID)
 				if err != nil {
 					Logger(cm.ctx).Infof("Failed to delete instance %s. Reason: %s", mi.Spec.ProviderID, err)

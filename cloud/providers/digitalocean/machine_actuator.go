@@ -314,9 +314,27 @@ func (do *MachineActuator) Exists(ctx context.Context, cluster *clusterv1.Cluste
 		return false, nil
 	}
 
-	if i != nil {
-		log.Infof("Found machine %q with droplet %v", machine.Name, i.ID)
+	if util.IsControlPlaneMachine(machine) {
+		publicIP, err := i.PublicIPv4()
+		if err != nil {
+			return false, err
+		}
+		if publicIP != "" {
+			cluster.Status.APIEndpoints = []clusterv1.APIEndpoint{
+				{
+					Host: publicIP,
+					Port: 6443,
+				},
+			}
+		}
+		if err = doCapi.SetLinodeClusterProviderStatus(cluster); err != nil {
+			return false, err
+		}
+		if err = do.client.Status().Update(ctx, cluster); err != nil {
+			return false, err
+		}
 	}
+	
 	return i != nil, nil
 }
 

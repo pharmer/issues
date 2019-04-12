@@ -10,10 +10,6 @@ import (
 )
 
 const (
-	DigitalOceanProviderGroupName  = "digitaloceanproviderconfig"
-	DigitalOceanProviderKind       = "DigitaloceanClusterProviderConfig"
-	DigitalOceanProviderApiVersion = "v1alpha1"
-
 	GKEProviderGroupName  = "gkeproviderconfig"
 	GKEProviderKind       = "GKEProviderConfig"
 	GKEProviderApiVersion = "v1alpha1"

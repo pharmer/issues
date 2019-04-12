@@ -254,10 +254,6 @@ func (conn *cloudConnector) CreateInstance(cluster *api.Cluster, machine *cluste
 		return nil, err
 	}
 
-	fmt.Println()
-	fmt.Println(script)
-	fmt.Println()
-
 	machineConfig, err := doCapi.MachineConfigFromProviderSpec(machine.Spec.ProviderSpec)
 	if err != nil {
 		return nil, err
