@@ -3,13 +3,13 @@ package gce
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	. "github.com/appscode/go/context"
+	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	clusterapiGCE "github.com/pharmer/pharmer/apis/v1beta1/gce"
@@ -53,60 +53,61 @@ type cloudConnector struct {
 	owner string
 }
 
-func NewConnector(ctx context.Context, cluster *api.Cluster, owner string) (*cloudConnector, error) {
-	cred, err := Store(ctx).Owner(owner).Credentials().Get(cluster.ClusterConfig().CredentialName)
+func NewConnector(cm *ClusterManager) (*cloudConnector, error) {
+	cred, err := Store(cm.ctx).Owner(cm.owner).Credentials().Get(cm.cluster.ClusterConfig().CredentialName)
 	if err != nil {
 		return nil, err
 	}
 	typed := credential.GCE{CommonSpec: credential.CommonSpec(cred.Spec)}
 	if ok, err := typed.IsValid(); !ok {
-		return nil, errors.Wrapf(err, "credential %s is invalid", cluster.Spec.Config.CredentialName)
+		return nil, errors.Wrapf(err, "credential %s is invalid", cm.cluster.Spec.Config.CredentialName)
 	}
 
-	cluster.Spec.Config.Cloud.Project = typed.ProjectID()
+	cm.cluster.Spec.Config.Cloud.Project = typed.ProjectID()
 	conf, err := google.JWTConfigFromJSON([]byte(typed.ServiceAccount()),
 		compute.ComputeScope,
 		compute.DevstorageReadWriteScope,
 		rupdate.ReplicapoolScope)
 	if err != nil {
-		return nil, errors.Wrap(err, ID(ctx))
+		return nil, errors.Wrap(err, ID(cm.ctx))
 	}
 	client := conf.Client(context.Background())
 	computeService, err := compute.New(client)
 	if err != nil {
-		return nil, errors.Wrap(err, ID(ctx))
+		return nil, errors.Wrap(err, ID(cm.ctx))
 	}
 	storageService, err := gcs.New(client)
 	if err != nil {
-		return nil, errors.Wrap(err, ID(ctx))
+		return nil, errors.Wrap(err, ID(cm.ctx))
 	}
 	updateService, err := rupdate.New(client)
 	if err != nil {
-		return nil, errors.Wrap(err, ID(ctx))
+		return nil, errors.Wrap(err, ID(cm.ctx))
 	}
 
-	clusterConfig, err := clusterapiGCE.ClusterConfigFromProviderSpec(cluster.Spec.ClusterAPI.Spec.ProviderSpec)
+	clusterConfig, err := clusterapiGCE.ClusterConfigFromProviderSpec(cm.cluster.Spec.ClusterAPI.Spec.ProviderSpec)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error decoding cluster specs from provider config")
 	}
-	clusterConfig.Project = cluster.Spec.Config.Cloud.Project
+	clusterConfig.Project = cm.cluster.Spec.Config.Cloud.Project
 
 	rawSpec, err := clusterapiGCE.EncodeClusterSpec(clusterConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to encode cluster spec")
 	}
-	cluster.Spec.ClusterAPI.Spec.ProviderSpec.Value = rawSpec
+	cm.cluster.Spec.ClusterAPI.Spec.ProviderSpec.Value = rawSpec
 
 	conn := cloudConnector{
-		ctx:            ctx,
-		cluster:        cluster,
+		ctx:            cm.ctx,
+		cluster:        cm.cluster,
 		computeService: computeService,
 		storageService: storageService,
 		updateService:  updateService,
-		owner:          owner,
+		owner:          cm.owner,
+		namer:          cm.namer,
 	}
 	if ok, msg := conn.IsUnauthorized(typed.ProjectID()); !ok {
-		return nil, errors.Errorf("Credential %s does not have necessary authorization. Reason: %s.", cluster.Spec.Config.CredentialName, msg)
+		return nil, errors.Errorf("Credential %s does not have necessary authorization. Reason: %s.", cm.cluster.Spec.Config.CredentialName, msg)
 	}
 	return &conn, nil
 }
@@ -124,32 +125,27 @@ func (conn *cloudConnector) CreateCredentialSecret(kc kubernetes.Interface, data
 	return nil
 }
 
-func PrepareCloud(ctx context.Context, clusterName string, owner string) (*cloudConnector, error) {
+func PrepareCloud(cm *ClusterManager) (*cloudConnector, error) {
 	var err error
 	var conn *cloudConnector
-	cluster, err := Store(ctx).Owner(owner).Clusters().Get(clusterName)
-	if err != nil {
-		return conn, fmt.Errorf("cluster `%s` does not exist. Reason: %v", clusterName, err)
-	}
-	//cm.cluster = cluster
 
-	if ctx, err = LoadCACertificates(ctx, cluster, owner); err != nil {
+	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster, cm.owner); err != nil {
 		return conn, err
 	}
 	/*if cm.ctx, err = LoadEtcdCertificate(cm.ctx, cm.cluster); err != nil {
 		return err
 	}*/
-	if ctx, err = LoadSSHKey(ctx, cluster, owner); err != nil {
+	if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster, cm.owner); err != nil {
 		return conn, err
 	}
 	/*if cm.ctx, err = LoadSaKey(cm.ctx, cm.cluster); err != nil {
 		return err
 	}*/
 
-	if conn, err = NewConnector(ctx, cluster, owner); err != nil {
+	if conn, err = NewConnector(cm); err != nil {
 		return nil, err
 	}
-	conn.namer = namer{cluster: cluster}
+
 	return conn, nil
 }
 
@@ -646,7 +642,7 @@ func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster, machine *c
 	}
 	//Logger(conn.ctx).Infof("Master instance of type %v in zone %v using persistent disk %v created", machineType, zone, pdSrc)
 	Logger(conn.ctx).Infof("Master instance of type %v in zone %v is created", machineType, zone)
-	log.Println(r1.Name)
+	log.Infof(r1.Name)
 
 	return r1.Name, nil
 }

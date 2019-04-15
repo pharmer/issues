@@ -6,6 +6,7 @@ import (
 	"time"
 
 	semver "github.com/appscode/go-version"
+	"github.com/appscode/go/log"
 	stringz "github.com/appscode/go/strings"
 	apiAlpha "github.com/pharmer/pharmer/apis/v1alpha1"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
@@ -294,7 +295,7 @@ func CreateSecret(kc kubernetes.Interface, name, namespace string, data map[stri
 	}
 	return wait.PollImmediate(RetryInterval, RetryTimeout, func() (bool, error) {
 		if _, err := kc.CoreV1().Secrets(namespace).Get(secret.Name, metav1.GetOptions{}); err == nil {
-			fmt.Println("Secret %q Already Exists, Ignoring", secret.Name)
+			log.Infof("Secret %q Already Exists, Ignoring", secret.Name)
 			return true, nil
 		}
 
