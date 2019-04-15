@@ -3,6 +3,9 @@ package gce
 import (
 	"encoding/json"
 
+	. "github.com/pharmer/pharmer/apis/v1beta1"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
@@ -102,4 +105,24 @@ func EncodeClusterSpec(spec *GCEClusterProviderSpec) (*runtime.RawExtension, err
 	return &runtime.RawExtension{
 		Raw: rawBytes,
 	}, nil
+}
+
+// SetGCEClusterProvidreConfig sets default gce cluster providerSpec
+func SetGCEclusterProviderConfig(cluster *clusterv1.Cluster, config *ClusterConfig) error {
+	conf := &GCEClusterProviderSpec{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GCEProviderGroupName + "/" + GCEProviderApiVersion,
+			Kind:       GCEClusterProviderKind,
+		},
+		Project: config.Cloud.Project,
+	}
+
+	rawConf, err := EncodeClusterSpec(conf)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode cluster provider spec")
+	}
+
+	cluster.Spec.ProviderSpec.Value = rawConf
+
+	return nil
 }
