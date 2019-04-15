@@ -37,7 +37,6 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster, cm.owner); err != nil {
 		return nil, err
 	}
-
 	if cm.conn, err = PrepareCloud(cm.ctx, in.Name, cm.owner); err != nil {
 		return nil, err
 	}
@@ -155,15 +154,8 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 	}
 
 	// ------------------------------- ASSETS ----------------------------------
-
-	var machines []*clusterv1.Machine
-	machines, err = Store(cm.ctx).Owner(cm.owner).Machine(cm.cluster.Name).List(metav1.ListOptions{})
-	if err != nil {
-		err = errors.Wrap(err, ID(cm.ctx))
-		return
-	}
 	var masterMachine *clusterv1.Machine
-	masterMachine, err = api.GetLeaderMachine(machines)
+	masterMachine, err = GetLeaderMachine(cm.ctx, cm.cluster, cm.owner)
 	if err != nil {
 		return
 	}
@@ -410,7 +402,7 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 		return
 	}
 	var masterMachine *clusterv1.Machine
-	masterMachine, err = api.GetLeaderMachine(machines)
+	masterMachine, err = GetLeaderMachine(cm.ctx, cm.cluster, cm.owner)
 	if err != nil {
 		return
 	}

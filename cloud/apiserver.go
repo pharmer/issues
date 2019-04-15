@@ -6,6 +6,7 @@ import (
 	"time"
 
 	semver "github.com/appscode/go-version"
+	"github.com/appscode/go/log"
 	stringz "github.com/appscode/go/strings"
 	apiAlpha "github.com/pharmer/pharmer/apis/v1alpha1"
 	api "github.com/pharmer/pharmer/apis/v1beta1"

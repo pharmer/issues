@@ -113,12 +113,7 @@ func (ca *ClusterApi) Apply(controllerManager string) error {
 		return err
 	}
 
-	machines, err := Store(ca.ctx).Owner(ca.Owner).Machine(ca.cluster.Name).List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	masterMachine, err := api.GetLeaderMachine(machines)
+	masterMachine, err := GetLeaderMachine(ca.ctx, ca.cluster, ca.Owner)
 	if err != nil {
 		return err
 	}
