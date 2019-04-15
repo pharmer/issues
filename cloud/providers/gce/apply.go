@@ -3,10 +3,10 @@ package gce
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	semver "github.com/appscode/go-version"
 	. "github.com/appscode/go/context"
+	"github.com/appscode/go/log"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	clusterapiGCE "github.com/pharmer/pharmer/apis/v1beta1/gce"
 	. "github.com/pharmer/pharmer/cloud"
@@ -31,13 +31,8 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	}
 	cm.cluster = in
 	cm.namer = namer{cluster: cm.cluster}
-	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster, cm.owner); err != nil {
-		return nil, err
-	}
-	if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster, cm.owner); err != nil {
-		return nil, err
-	}
-	if cm.conn, err = PrepareCloud(cm.ctx, in.Name, cm.owner); err != nil {
+
+	if _, err = PrepareCloud(cm); err != nil {
 		return nil, err
 	}
 	cm.conn.namer = cm.namer
@@ -86,7 +81,12 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	{
 		a, err := cm.applyScale(dryRun)
 		if err != nil {
-			return nil, err
+			// ignore error if cluster is deleted
+			if cm.cluster.DeletionTimestamp != nil && cm.cluster.Status.Phase != api.ClusterDeleted {
+				log.Infoln(err)
+			} else {
+				return nil, err
+			}
 		}
 		acts = append(acts, a...)
 	}
@@ -215,7 +215,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		})
 		if !dryRun {
 			var op1 string
-			log.Println("Creating Master Instance")
+			log.Infof("Creating Master Instance")
 			if op1, err = cm.conn.createMasterIntance(cm.cluster, masterMachine); err != nil {
 				return
 			}
