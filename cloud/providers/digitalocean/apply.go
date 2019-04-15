@@ -378,16 +378,6 @@ func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error
 					Logger(cm.ctx).Infof("Failed to delete instance %s. Reason: %s", mi.Spec.ProviderID, err)
 				}
 			}
-			/*if masterNG.Spec.Template.Spec.ExternalIPType == api.IPTypeReserved {
-				for _, addr := range masterInstance.Status.Addresses {
-					if addr.Type == core.NodeExternalIP {
-						err = cm.conn.releaseReservedIP(addr.Address)
-						if err != nil {
-							return
-						}
-					}
-				}
-			}*/
 		}
 	}
 
