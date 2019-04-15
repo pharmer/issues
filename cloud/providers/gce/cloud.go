@@ -12,6 +12,7 @@ import (
 	. "github.com/appscode/go/context"
 	"github.com/appscode/go/types"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
+	clusterapiGCE "github.com/pharmer/pharmer/apis/v1beta1/gce"
 	proconfig "github.com/pharmer/pharmer/apis/v1beta1/gce"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pharmer/pharmer/credential"
@@ -84,9 +85,17 @@ func NewConnector(ctx context.Context, cluster *api.Cluster, owner string) (*clo
 		return nil, errors.Wrap(err, ID(ctx))
 	}
 
-	if err = proconfig.SetGCEClusterProviderSpec(cluster.Spec.ClusterAPI, cluster.ClusterConfig()); err != nil {
-		return nil, errors.Wrap(err, ID(ctx))
+	clusterConfig, err := clusterapiGCE.ClusterConfigFromProviderSpec(cluster.Spec.ClusterAPI.Spec.ProviderSpec)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error decoding cluster specs from provider config")
 	}
+	clusterConfig.Project = cluster.Spec.Config.Cloud.Project
+
+	rawSpec, err := clusterapiGCE.EncodeClusterSpec(clusterConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to encode cluster spec")
+	}
+	cluster.Spec.ClusterAPI.Spec.ProviderSpec.Value = rawSpec
 
 	conn := cloudConnector{
 		ctx:            ctx,
@@ -509,7 +518,10 @@ func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster, machine *c
 		}
 	}
 
-	providerSpec := proconfig.GetGCEMachineProviderSpec(machine.Spec.ProviderSpec)
+	providerSpec, err := proconfig.MachineConfigFromProviderSpec(machine.Spec.ProviderSpec)
+	if err != nil {
+		return "", errors.Wrap(err, "Error decoding machine provider spec from machine spec")
+	}
 
 	machineType := fmt.Sprintf("projects/%v/zones/%v/machineTypes/%v", conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, providerSpec.MachineType)
 	zone := fmt.Sprintf("projects/%v/zones/%v", conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone)

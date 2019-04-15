@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
+	clusterapiGCE "github.com/pharmer/pharmer/apis/v1beta1/gce"
 	proconfig "github.com/pharmer/pharmer/apis/v1beta1/gce"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
@@ -127,7 +128,17 @@ func (cm *ClusterManager) SetDefaultCluster(cluster *api.Cluster, config *api.Cl
 		Phase: api.ClusterPending,
 	}
 
-	return proconfig.SetGCEClusterProviderSpec(cluster.Spec.ClusterAPI, config)
+	providerSpec := clusterapiGCE.GCEClusterProviderSpec{
+		Project: cluster.Spec.Config.Cloud.Project,
+	}
+
+	rawSpec, err := clusterapiGCE.EncodeClusterSpec(&providerSpec)
+	if err != nil {
+		return errors.Wrap(err, "Error encoding cluster spec")
+	}
+	cluster.Spec.ClusterAPI.Spec.ProviderSpec.Value = rawSpec
+
+	return nil
 }
 
 func (cm *ClusterManager) IsValid(cluster *api.Cluster) (bool, error) {
