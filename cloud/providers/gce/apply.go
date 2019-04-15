@@ -8,7 +8,7 @@ import (
 	semver "github.com/appscode/go-version"
 	. "github.com/appscode/go/context"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
-	proconfig "github.com/pharmer/pharmer/apis/v1beta1/gce"
+	clusterapiGCE "github.com/pharmer/pharmer/apis/v1beta1/gce"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -173,7 +173,10 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		return nil, err
 	}
 
-	providerSpec := proconfig.GetGCEMachineProviderSpec(masterMachine.Spec.ProviderSpec)
+	providerSpec, err := clusterapiGCE.MachineConfigFromProviderSpec(masterMachine.Spec.ProviderSpec)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode machine provider spec")
+	}
 
 	if providerSpec.MachineType == "" {
 		totalNodes := NodeCount(machineSets)
@@ -301,10 +304,6 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 
 	Logger(cm.ctx).Infoln("Creating secret credential...")
 	if err = CreateCredentialSecret(cm.ctx, kc, cm.cluster, cm.owner); err != nil {
-		return
-	}
-
-	if err = proconfig.SetGCEClusterProviderStatus(cm.cluster.Spec.ClusterAPI); err != nil {
 		return
 	}
 
