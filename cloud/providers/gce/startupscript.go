@@ -24,7 +24,9 @@ func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clu
 		KubeadmToken:      token,
 		CAHash:            pubkeypin.Hash(CACert(ctx)),
 		CAKey:             string(cert.EncodePrivateKeyPEM(CAKey(ctx))),
+		SAKey:             string(cert.EncodePrivateKeyPEM(SaKey(ctx))),
 		FrontProxyKey:     string(cert.EncodePrivateKeyPEM(FrontProxyCAKey(ctx))),
+		ETCDCAKey:         string(cert.EncodePrivateKeyPEM(EtcdCaKey(ctx))),
 		APIServerAddress:  cluster.APIServerAddress(),
 		NetworkProvider:   cluster.ClusterConfig().Cloud.NetworkProvider,
 		Provider:          cluster.ClusterConfig().Cloud.CloudProvider,
@@ -138,7 +140,9 @@ func newMasterTemplateData(ctx context.Context, cluster *api.Cluster, machine *c
 			ExtraArgs: cluster.Spec.Config.SchedulerExtraArgs,
 		},
 	}
+	td.ControlPlaneEndpointsFromLB(&cfg, cluster)
 	td.ClusterConfiguration = &cfg
+
 	return td
 }
 
@@ -184,8 +188,6 @@ func (conn *cloudConnector) renderStartupScript(cluster *api.Cluster, machine *c
 	}
 
 	var script bytes.Buffer
-	_ = tpl.ExecuteTemplate(&script, api.RoleMaster, newMasterTemplateData(conn.ctx, cluster, machine))
-
 	if util.IsControlPlaneMachine(machine) {
 		if err := tpl.ExecuteTemplate(&script, api.RoleMaster, newMasterTemplateData(conn.ctx, cluster, machine)); err != nil {
 			return "", err

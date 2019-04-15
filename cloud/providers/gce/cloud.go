@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/appscode/go/context"
@@ -125,28 +126,186 @@ func (conn *cloudConnector) CreateCredentialSecret(kc kubernetes.Interface, data
 	return nil
 }
 
-func PrepareCloud(cm *ClusterManager) (*cloudConnector, error) {
+func PrepareCloud(cm *ClusterManager) error {
 	var err error
-	var conn *cloudConnector
 
 	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster, cm.owner); err != nil {
-		return conn, err
-	}
-	/*if cm.ctx, err = LoadEtcdCertificate(cm.ctx, cm.cluster); err != nil {
 		return err
-	}*/
+	}
+	if cm.ctx, err = LoadEtcdCertificate(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
+	}
 	if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster, cm.owner); err != nil {
-		return conn, err
-	}
-	/*if cm.ctx, err = LoadSaKey(cm.ctx, cm.cluster); err != nil {
 		return err
-	}*/
-
-	if conn, err = NewConnector(cm); err != nil {
-		return nil, err
+	}
+	if cm.ctx, err = LoadSaKey(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
 	}
 
-	return conn, nil
+	if cm.conn, err = NewConnector(cm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func errAlreadyExists(err error) bool {
+	return strings.Contains(err.Error(), "alreadyExists")
+}
+
+func (conn *cloudConnector) getLoadBalancer() (string, error) {
+	log.Infof("Getting Load Balancer for cluster %s", conn.cluster.Name)
+
+	project := conn.cluster.Spec.Config.Cloud.Project
+	region := conn.cluster.Spec.Config.Cloud.Region
+	clusterName := conn.cluster.Name
+	name := fmt.Sprintf("%s-apiserver", clusterName)
+
+	address, err := conn.computeService.Addresses.Get(project, region, name).Do()
+	if err != nil {
+		return "", errors.Wrap(err, "Error getting load balancer ip address")
+	}
+
+	if _, err := conn.computeService.HttpHealthChecks.Get(project, name).Do(); err != nil {
+		return "", errors.Wrap(err, "Error getting health check probes for load balancer")
+	}
+
+	if _, err := conn.computeService.TargetPools.Get(project, region, name).Do(); err != nil {
+		return "", errors.Wrap(err, "Error getting target pools for load balancer")
+	}
+
+	if _, err := conn.computeService.ForwardingRules.Get(project, region, name).Do(); err != nil {
+		return "", errors.Wrap(err, "Error getting forwarding rules for load balancer")
+	}
+
+	log.Infof("Successfully found load balancer for cluster %s", conn.cluster.Name)
+	return address.Address, nil
+}
+
+func (conn *cloudConnector) createLoadBalancer(leaderMachine string) (string, error) {
+	log.Infof("Creating load balancer cluster %s", conn.cluster.Name)
+
+	project := conn.cluster.Spec.Config.Cloud.Project
+	region := conn.cluster.Spec.Config.Cloud.Region
+	zone := conn.cluster.Spec.Config.Cloud.Zone
+	clusterName := conn.cluster.Name
+	name := conn.namer.loadBalancerName()
+
+	addressOp, err := conn.computeService.Addresses.Insert(project, region, &compute.Address{
+		Name: name,
+	}).Do()
+
+	if err == nil {
+		if err := conn.waitForRegionOperation(addressOp.Name); err != nil {
+			return "", errors.Wrap(err, "Timed out waiting for load balancer ip to get ready")
+		}
+	} else if !errAlreadyExists(err) {
+		return "", errors.Wrap(err, "Error creating ip address for load balancer")
+	}
+
+	address, err := conn.computeService.Addresses.Get(project, region, name).Do()
+	if err != nil {
+		return "", errors.Wrap(err, "Error getting load balancer ip")
+	}
+
+	_, err = conn.computeService.HttpHealthChecks.Insert(project, &compute.HttpHealthCheck{
+		Name: name,
+		Port: 6443,
+	}).Do()
+
+	if err != nil && !errAlreadyExists(err) {
+		return "", errors.Wrap(err, "Error creating healthcheck probes for load balancer")
+	}
+
+	targetPools, err := conn.computeService.TargetPools.Insert(project, region, &compute.TargetPool{
+		Name:         name,
+		HealthChecks: []string{fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/httpHealthChecks/%s", project, name)},
+		Instances:    []string{fmt.Sprintf("projects/%s/zones/%s/instances/%s", project, zone, leaderMachine)},
+	}).Do()
+
+	if err == nil {
+		if err := conn.waitForRegionOperation(targetPools.Name); err != nil {
+			return "", errors.Wrap(err, "Timed out waiting for backend pools to be ready")
+		}
+	} else if !errAlreadyExists(err) {
+		return "", errors.Wrap(err, "Error creating load balancer backend pools")
+	}
+
+	forwardingRule, err := conn.computeService.ForwardingRules.Insert(project, region, &compute.ForwardingRule{
+		LoadBalancingScheme: "EXTERNAL",
+		IPAddress:           address.Address,
+		Name:                name,
+		IPProtocol:          "TCP",
+		PortRange:           "6443",
+		Target:              fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/regions/%s/targetPools/%s", project, region, name),
+	}).Do()
+
+	if err == nil {
+		if err := conn.waitForRegionOperation(forwardingRule.Name); err != nil {
+			return "", errors.Wrap(err, "Timed out waiting for load balancer forwarding rules to be ready")
+		}
+	} else if !errAlreadyExists(err) {
+		return "", errors.Wrap(err, "Error creating load balancer forwarding rules")
+	}
+
+	log.Infof("Successfully created load balancer: %s-apiserver with ip %q", clusterName, address.Address)
+	return address.Address, nil
+}
+
+func (conn *cloudConnector) deleteLoadBalancer() error {
+	log.Infof("Deleting load balancer")
+
+	project := conn.cluster.Spec.Config.Cloud.Project
+	region := conn.cluster.Spec.Config.Cloud.Region
+	clusterName := conn.cluster.Name
+	name := fmt.Sprintf("%s-apiserver", clusterName)
+
+	if _, err := conn.computeService.Addresses.Get(project, region, name).Do(); err == nil {
+		if _, err := conn.computeService.Addresses.Delete(project, region, name).Do(); err != nil {
+			return errors.Wrap(err, "failed to delete ip of load balancre")
+		}
+	} else if !errDeleted(err) {
+		return errors.Wrap(err, "Error getting load balancer ip address")
+	}
+	log.Info("deleted lb ip address")
+
+	if _, err := conn.computeService.ForwardingRules.Get(project, region, name).Do(); err == nil {
+		deleteOp, err := conn.computeService.ForwardingRules.Delete(project, region, name).Do()
+		if err != nil {
+			return errors.Wrap(err, "failed to delete forwarding rules for load balancer")
+		}
+		if err := conn.waitForRegionOperation(deleteOp.Name); err != nil {
+			return errors.Wrap(err, "timed out deleting lb forwarding rule")
+		}
+	} else if !errDeleted(err) {
+		return errors.Wrap(err, "Error getting forwarding rules for load balancer")
+	}
+	log.Info("deleted lb forwarding rule")
+
+	if _, err := conn.computeService.TargetPools.Get(project, region, name).Do(); err == nil {
+		deleteOp, err := conn.computeService.TargetPools.Delete(project, region, name).Do()
+		if err != nil {
+			return errors.Wrap(err, "failed to delete load balancer target pool")
+		}
+		if err := conn.waitForRegionOperation(deleteOp.Name); err != nil {
+			return errors.Wrap(err, "timed out deleting lb targte pool")
+		}
+	} else if !errDeleted(err) {
+		return errors.Wrap(err, "Error getting target pools for load balancer")
+	}
+	log.Info("deleted lb target rule")
+
+	if _, err := conn.computeService.HttpHealthChecks.Get(project, name).Do(); err == nil {
+		if _, err := conn.computeService.HttpHealthChecks.Delete(project, name).Do(); err != nil {
+			return errors.Wrap(err, "failed to delete load balancer health check probes")
+		}
+	} else if !errDeleted(err) {
+		return errors.Wrap(err, "Error getting health check probes for load balancer")
+	}
+	log.Info("deleted lb health check probe")
+
+	log.Infoln("successfully deleted load balancer")
+	return nil
 }
 
 func (conn *cloudConnector) deleteInstance(name string) error {
@@ -185,10 +344,13 @@ func (conn *cloudConnector) waitForRegionOperation(operation string) error {
 		attempt++
 
 		r1, err := conn.computeService.RegionOperations.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Region, operation).Do()
-		if err != nil {
+		if err != nil && !errDeleted(err) {
+			log.Info(err)
 			return false, nil
+		} else if err != nil && errDeleted(err) {
+			return true, nil
 		}
-		Logger(conn.ctx).Infof("Attempt %v: Operation %v is %v ...", attempt, operation)
+		Logger(conn.ctx).Infof("Attempt %v: Operation %v is in state %v ...", attempt, operation, r1.Status)
 		if r1.Status == "DONE" {
 			return true, nil
 		}
@@ -202,8 +364,10 @@ func (conn *cloudConnector) waitForZoneOperation(operation string) error {
 		attempt++
 
 		r1, err := conn.computeService.ZoneOperations.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, operation).Do()
-		if err != nil {
+		if err != nil && !errDeleted(err) {
 			return false, nil
+		} else if err != nil && errDeleted(err) {
+			return true, nil
 		}
 		Logger(conn.ctx).Infof("Attempt %v: Operation %v is %v ...", attempt, operation, r1.Status)
 		if r1.Status == "DONE" {
@@ -211,6 +375,10 @@ func (conn *cloudConnector) waitForZoneOperation(operation string) error {
 		}
 		return false, nil
 	})
+}
+
+func errDeleted(err error) bool {
+	return strings.Contains(err.Error(), "notFound")
 }
 
 func (conn *cloudConnector) importPublicKey() error {
@@ -230,7 +398,7 @@ func (conn *cloudConnector) importPublicKey() error {
 
 	err = conn.waitForGlobalOperation(r1.Name)
 	if err != nil {
-		errors.Wrap(err, ID(conn.ctx))
+		return errors.Wrap(err, ID(conn.ctx))
 	}
 	Logger(conn.ctx).Debug("Imported SSH key")
 	Logger(conn.ctx).Info("SSH key imported")
@@ -490,25 +658,30 @@ func (conn *cloudConnector) reserveIP() (string, error) {
 	return "", nil
 }
 
-func (conn *cloudConnector) getMasterInstance() (bool, error) {
-	if r1, err := conn.computeService.Instances.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, conn.namer.MasterName()).Do(); err != nil {
+func (conn *cloudConnector) getMasterInstance(machine *clusterv1.Machine) (bool, error) {
+	if r1, err := conn.computeService.Instances.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, machine.Name).Do(); err != nil {
 		Logger(conn.ctx).Debug("Retrieved master instance", r1, err)
 		return false, err
 	}
 	return true, nil
 }
 
-func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster, machine *clusterv1.Machine) (string, error) {
+func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster) (string, error) {
 	// MachineType:  "projects/tigerworks-kube/zones/us-central1-b/machineTypes/n1-standard-1",
 	// Zone:         "projects/tigerworks-kube/zones/us-central1-b",
+
+	machine, err := GetLeaderMachine(conn.ctx, conn.cluster, conn.owner)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get leader machine")
+	}
 
 	script, err := conn.renderStartupScript(cluster, machine, "")
 	if err != nil {
 		return "", err
 	}
 
-	if found, _ := conn.getMasterPDDisk(conn.namer.MasterPDName()); !found {
-		_, err := conn.createDisk(conn.namer.MasterPDName(), "pd-standard", 30)
+	if found, _ := conn.getMasterPDDisk(conn.namer.MachineDiskName(machine)); !found {
+		_, err := conn.createDisk(conn.namer.MachineDiskName(machine), "pd-standard", 30)
 		if err != nil {
 			return "", errors.Wrap(err, "failed to create disk for master machine")
 		}
@@ -521,14 +694,14 @@ func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster, machine *c
 
 	machineType := fmt.Sprintf("projects/%v/zones/%v/machineTypes/%v", conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, providerSpec.MachineType)
 	zone := fmt.Sprintf("projects/%v/zones/%v", conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone)
-	pdSrc := fmt.Sprintf("projects/%v/zones/%v/disks/%v", conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, conn.namer.MasterPDName())
+	pdSrc := fmt.Sprintf("projects/%v/zones/%v/disks/%v", conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, conn.namer.MachineDiskName(machine))
 	srcImage := fmt.Sprintf("projects/%v/global/images/%v", conn.cluster.Spec.Config.Cloud.InstanceImageProject, conn.cluster.Spec.Config.Cloud.InstanceImage)
 
 	pubKey := string(SSHKey(conn.ctx).PublicKey)
 	value := fmt.Sprintf("%v:%v %v", conn.namer.AdminUsername(), pubKey, conn.namer.AdminUsername())
 
 	instance := &compute.Instance{
-		Name:        conn.namer.MasterName(),
+		Name:        machine.Name,
 		Zone:        zone,
 		MachineType: machineType,
 		// --image-project="${MASTER_IMAGE_PROJECT}"
@@ -642,7 +815,6 @@ func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster, machine *c
 	}
 	//Logger(conn.ctx).Infof("Master instance of type %v in zone %v using persistent disk %v created", machineType, zone, pdSrc)
 	Logger(conn.ctx).Infof("Master instance of type %v in zone %v is created", machineType, zone)
-	log.Infof(r1.Name)
 
 	return r1.Name, nil
 }
@@ -984,60 +1156,98 @@ func (conn *cloudConnector) addNodeIntoGroup(ng *clusterv1.Machine, size int64) 
 	return nil
 }
 
-func (conn *cloudConnector) deleteMaster() error {
-	r2, err := conn.computeService.Instances.Delete(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, conn.namer.MasterName()).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
+func (conn *cloudConnector) deleteMaster(machines []*clusterv1.Machine) error {
+	size := len(machines)
+	errorCh := make(chan error, size)
+
+	var wg sync.WaitGroup
+
+	wg.Add(size)
+
+	for _, machine := range machines {
+		go func(machine *clusterv1.Machine) {
+			defer wg.Done()
+
+			log.Infof("Deleting machine %s", machine.Name)
+
+			instance, err := conn.computeService.Instances.Delete(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, machine.Name).Do()
+			if err != nil {
+				errorCh <- errors.Wrapf(err, "failed to delete machine %s", machine.Name)
+				return
+			}
+
+			// wait for instances to be deleted
+			// after they're completely deleted, we can remove attached disks
+			if err := conn.waitForZoneOperation(instance.Name); err != nil {
+				errorCh <- errors.Wrapf(err, "timed out waiting for deleting machine %s", machine.Name)
+				return
+			}
+
+			log.Infof("successfully deleted machine %s", machine.Name)
+		}(machine)
 	}
-	operation := r2.Name
-	err = conn.waitForZoneOperation(operation)
-	if err != nil {
-		return err
+	wg.Wait()
+	close(errorCh)
+
+	var allerr error
+	for err := range errorCh {
+		if allerr == nil {
+			allerr = errors.New("failed to delete master machines")
+		}
+		allerr = errors.Wrapf(allerr, "%v", err)
 	}
-	Logger(conn.ctx).Infof("Master instance %v deleted", conn.namer.MasterName())
-	return nil
+
+	if allerr == nil {
+		log.Info("successfully deleted master machines")
+		return nil
+	}
+	return errors.Wrap(allerr, "failed to delete master machines")
 }
 
 //delete disk
 func (conn *cloudConnector) deleteDisk(nodeDiskNames []string) error {
-	masterDisk := conn.namer.MasterPDName()
-	r6, err := conn.computeService.Disks.Delete(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, masterDisk).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	Logger(conn.ctx).Debugf("Master Disk response %v", r6)
-	time.Sleep(5 * time.Second)
-	r7, err := conn.computeService.Disks.List(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	for i := range r7.Items {
-		s := strings.Split(r7.Items[i].Name, "-")
-		diskName1 := strings.Join(s[0:len(s)-1], "-")
-		diskName2 := strings.Join(s[0:len(s)-2], "-")
+	log.Info("Deleting disks")
 
-		if diskName1 == conn.cluster.Name || diskName2 == conn.cluster.Name {
-			r, err := conn.computeService.Disks.Delete(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, r7.Items[i].Name).Do()
-			if err != nil {
-				return errors.Wrap(err, ID(conn.ctx))
+	project := conn.cluster.Spec.Config.Cloud.Project
+	zone := conn.cluster.Spec.Config.Cloud.Zone
+
+	var wg sync.WaitGroup
+	wg.Add(len(nodeDiskNames))
+
+	errCh := make(chan error, len(nodeDiskNames))
+
+	for _, disk := range nodeDiskNames {
+		go func(name string) {
+			log.Infof("deleting disk %s", name)
+
+			defer wg.Done()
+
+			if _, err := conn.computeService.Disks.Delete(project, zone, name).Do(); err != nil && !errDeleted(err) {
+				log.Infof("failed to delete disk %s: %v", name, err)
+				errCh <- err
+				return
 			}
-			Logger(conn.ctx).Infof("Disk %v deleted, response %v", r7.Items[i].Name, r.Status)
-			time.Sleep(5 * time.Second)
-		}
 
+			log.Infof("successfully deleted disk %s", name)
+		}(disk)
+	}
+	wg.Wait()
+	close(errCh)
+
+	var allerr error
+	for err := range errCh {
+		if allerr == nil {
+			allerr = errors.New("failed to delete master machines")
+		}
+		allerr = errors.Wrap(allerr, fmt.Sprintf("%v", err))
 	}
 
-	for _, diskName := range nodeDiskNames {
-		r, err := conn.computeService.Disks.Delete(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, diskName).Do()
-		if err != nil {
-			//return errors.Wrap(err, ID(conn.ctx))
-			Logger(conn.ctx).Infoln(err)
-		}
-		Logger(conn.ctx).Infof("Disk %v deleted, response %v", diskName, r.Status)
-		time.Sleep(5 * time.Second)
+	if allerr == nil {
+		log.Info("successfully deleted disks")
+		return nil
 	}
 
-	return nil
+	return allerr
 }
 
 func (conn *cloudConnector) deleteRoutes() error {
