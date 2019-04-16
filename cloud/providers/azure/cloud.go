@@ -58,25 +58,25 @@ type cloudConnector struct {
 	storageClient           storage.AccountsClient
 }
 
-func NewConnector(ctx context.Context, cluster *api.Cluster, owner string) (*cloudConnector, error) {
-	cred, err := Store(ctx).Owner(owner).Credentials().Get(cluster.Spec.Config.CredentialName)
+func NewConnector(cm *ClusterManager) (*cloudConnector, error) {
+	cred, err := Store(cm.ctx).Owner(cm.owner).Credentials().Get(cm.cluster.Spec.Config.CredentialName)
 	if err != nil {
 		return nil, err
 	}
 	typed := credential.Azure{CommonSpec: credential.CommonSpec(cred.Spec)}
 	if ok, err := typed.IsValid(); !ok {
-		return nil, errors.Wrapf(err, "credential %s is invalid", cluster.Spec.Config.CredentialName)
+		return nil, errors.Wrapf(err, "credential %s is invalid", cm.cluster.Spec.Config.CredentialName)
 	}
 
 	baseURI := azure.PublicCloud.ResourceManagerEndpoint
 	config, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, typed.TenantID())
 	if err != nil {
-		return nil, errors.Wrap(err, ID(ctx))
+		return nil, errors.Wrap(err, ID(cm.ctx))
 	}
 
 	spt, err := adal.NewServicePrincipalToken(*config, typed.ClientID(), typed.ClientSecret(), baseURI)
 	if err != nil {
-		return nil, errors.Wrap(err, ID(ctx))
+		return nil, errors.Wrap(err, ID(cm.ctx))
 	}
 
 	client := autorest.NewClientWithUserAgent(fmt.Sprintf("Azure-SDK-for-Go/%s", compute.Version()))
@@ -122,8 +122,8 @@ func NewConnector(ctx context.Context, cluster *api.Cluster, owner string) (*clo
 	lbClient.Authorizer = autorest.NewBearerAuthorizer(spt)
 
 	return &cloudConnector{
-		cluster:                 cluster,
-		ctx:                     ctx,
+		cluster:                 cm.cluster,
+		ctx:                     cm.ctx,
 		availabilitySetsClient:  availabilitySetsClient,
 		vmClient:                vmClient,
 		vmExtensionsClient:      vmExtensionsClient,
@@ -138,30 +138,32 @@ func NewConnector(ctx context.Context, cluster *api.Cluster, owner string) (*clo
 		storageClient:           storageClient,
 		lbClient:                lbClient,
 
-		owner: owner,
+		owner: cm.owner,
+		namer: cm.namer,
 	}, nil
 }
 
-func PrepareCloud(ctx context.Context, clusterName, owner string) (*cloudConnector, error) {
+func PrepareCloud(cm *ClusterManager) error {
 	var err error
-	var conn *cloudConnector
-	cluster, err := Store(ctx).Owner(owner).Clusters().Get(clusterName)
-	if err != nil {
-		return conn, fmt.Errorf("cluster `%s` does not exist. Reason: %v", clusterName, err)
-	}
-	//cm.cluster = cluster
 
-	if ctx, err = LoadCACertificates(ctx, cluster, owner); err != nil {
-		return conn, err
+	if cm.ctx, err = LoadCACertificates(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
 	}
-	if ctx, err = LoadSSHKey(ctx, cluster, owner); err != nil {
-		return conn, err
+	if cm.ctx, err = LoadEtcdCertificate(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
 	}
-	if conn, err = NewConnector(ctx, cluster, owner); err != nil {
-		return nil, err
+	if cm.ctx, err = LoadSSHKey(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
 	}
-	//cm.namer = namer{cluster: cm.cluster}
-	return conn, nil
+	if cm.ctx, err = LoadSaKey(cm.ctx, cm.cluster, cm.owner); err != nil {
+		return err
+	}
+
+	if cm.conn, err = NewConnector(cm); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (conn *cloudConnector) CreateCredentialSecret(kc kubernetes.Interface, data map[string]string) error {
@@ -295,19 +297,6 @@ func (conn *cloudConnector) createNetworkSecurityGroup(isControlPlane bool) (net
 	if isControlPlane {
 		securityRules = &[]network.SecurityRule{
 			{
-				Name: to.StringPtr("allow_ssh"),
-				SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-					Protocol:                 network.SecurityRuleProtocolTCP,
-					SourceAddressPrefix:      to.StringPtr("*"),
-					SourcePortRange:          to.StringPtr("*"),
-					DestinationAddressPrefix: to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("22"),
-					Access:                   network.SecurityRuleAccessAllow,
-					Direction:                network.SecurityRuleDirectionInbound,
-					Priority:                 to.Int32Ptr(100),
-				},
-			},
-			{
 				Name: to.StringPtr("allow_6443"),
 				SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
 					Protocol:                 network.SecurityRuleProtocolTCP,
@@ -317,7 +306,7 @@ func (conn *cloudConnector) createNetworkSecurityGroup(isControlPlane bool) (net
 					DestinationPortRange:     to.StringPtr("6443"),
 					Access:                   network.SecurityRuleAccessAllow,
 					Direction:                network.SecurityRuleDirectionInbound,
-					Priority:                 to.Int32Ptr(101),
+					Priority:                 to.Int32Ptr(100),
 				},
 			},
 		}
@@ -810,7 +799,7 @@ func (conn *cloudConnector) createPublicIP(ipName string) (network.PublicIPAddre
 		return network.PublicIPAddress{}, errors.Wrap(err, "result error")
 	}
 
-	log.Infof("Successfully created public ip %q", publicIP.Name)
+	log.Infof("Successfully created public ip %q", *publicIP.Name)
 	return publicIP, err
 }
 
@@ -869,11 +858,6 @@ func (conn *cloudConnector) createNetworkInterface(name string, subnet *network.
 		network.BackendAddressPool{
 			ID: (*publicLB.BackendAddressPools)[0].ID,
 		})
-	nicConfig.LoadBalancerInboundNatRules = &[]network.InboundNatRule{
-		{
-			ID: (*publicLB.InboundNatRules)[0].ID,
-		},
-	}
 
 	backendAddressPools = append(backendAddressPools,
 		network.BackendAddressPool{
