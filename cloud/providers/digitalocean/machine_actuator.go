@@ -327,14 +327,14 @@ func (do *MachineActuator) Exists(ctx context.Context, cluster *clusterv1.Cluste
 				},
 			}
 		}
-		if err = doCapi.SetLinodeClusterProviderStatus(cluster); err != nil {
+		if err = doCapi.SetDigitalOceanClusterProviderStatus(cluster); err != nil {
 			return false, err
 		}
 		if err = do.client.Status().Update(ctx, cluster); err != nil {
 			return false, err
 		}
 	}
-	
+
 	return i != nil, nil
 }
 

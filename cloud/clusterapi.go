@@ -196,7 +196,7 @@ func (ca *ClusterApi) CreatePharmerSecret() error {
 		return err
 	}
 
-	if err = CreateNamespace(ca.kc, ca.namespace);  err != nil {
+	if err = CreateNamespace(ca.kc, ca.namespace); err != nil {
 		return err
 	}
 

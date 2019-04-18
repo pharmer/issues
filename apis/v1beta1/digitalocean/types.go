@@ -2,6 +2,7 @@ package digitalocean
 
 import (
 	"encoding/json"
+
 	"github.com/digitalocean/godo"
 	. "github.com/pharmer/pharmer/apis/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,6 @@ const (
 	DigitalOceanProviderKind       = "DigitalOceanProviderConfig"
 	DigitalOceanProviderApiVersion = "v1alpha1"
 )
-
 
 type DigitalOceanMachineProviderSpec struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -87,7 +87,7 @@ func SetDigitalOceanClusterProviderConfig(cluster *clusterapi.Cluster, config *C
 	return nil
 }
 
-func SetLinodeClusterProviderStatus(cluster *clusterapi.Cluster) error {
+func SetDigitalOceanClusterProviderStatus(cluster *clusterapi.Cluster) error {
 	conf := &DigitalOceanClusterProviderStatus{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: DigitalOceanProviderGroupName + "/" + DigitalOceanProviderApiVersion,
@@ -104,8 +104,6 @@ func SetLinodeClusterProviderStatus(cluster *clusterapi.Cluster) error {
 	}
 	return nil
 }
-
-
 
 func DescribeLoadBalancer(lb *godo.LoadBalancer) *DigitalOceanLoadBalancer {
 	return &DigitalOceanLoadBalancer{
