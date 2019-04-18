@@ -43,7 +43,7 @@ type ApiServerTemplate struct {
 	ClusterOwner        string
 }
 
-var MachineControllerImage = "pharmer/machine-controller:platform"
+var MachineControllerImage = "pharmer/machine-controller:linode-ha"
 
 const (
 	BasePath = ".pharmer/config.d"
@@ -196,8 +196,9 @@ func (ca *ClusterApi) CreatePharmerSecret() error {
 		return err
 	}
 
-	err = CreateNamespace(ca.kc, ca.namespace)
-	fmt.Println(err)
+	if err = CreateNamespace(ca.kc, ca.namespace); err != nil {
+		return err
+	}
 
 	if err = CreateSecret(ca.kc, "pharmer-cred", ca.namespace, map[string][]byte{
 		fmt.Sprintf("%v.json", ca.cluster.ClusterConfig().CredentialName): credData,

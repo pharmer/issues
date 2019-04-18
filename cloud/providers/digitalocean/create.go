@@ -25,6 +25,10 @@ func (cm *ClusterManager) GetDefaultMachineProviderSpec(cluster *api.Cluster, sk
 	}
 	config := cluster.Spec.Config
 	spec := &doCapi.DigitalOceanMachineProviderSpec{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: doCapi.DigitalOceanProviderGroupName + "/" + doCapi.DigitalOceanProviderApiVersion,
+			Kind:       doCapi.DigitalOceanProviderKind,
+		},
 		Region: config.Cloud.Region,
 		Size:   sku,
 		Image:  config.Cloud.InstanceImage,
@@ -80,30 +84,10 @@ func (cm *ClusterManager) SetDefaultCluster(cluster *api.Cluster, config *api.Cl
 		Phase: api.ClusterPending,
 	}
 	cm.cluster = cluster
-
+	cluster.SetNetworkingDefaults("calico")
+	return doCapi.SetDigitalOceanClusterProviderConfig(cluster.Spec.ClusterAPI, config)
 	// add provider config to cluster
-	return cm.SetClusterProviderConfig()
-}
-
-func (cm *ClusterManager) SetClusterProviderConfig() error {
-	conf := &doCapi.DigitalOceanClusterProviderSpec{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: api.DigitalOceanProviderGroupName + "/" + api.DigitalOceanProviderApiVersion,
-			Kind:       api.DigitalOceanProviderKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: cm.cluster.Name,
-		},
-	}
-
-	rawSpec, err := doCapi.EncodeClusterSpec(conf)
-	if err != nil {
-		return err
-	}
-
-	cm.cluster.Spec.ClusterAPI.Spec.ProviderSpec.Value = rawSpec
-
-	return nil
+	//return cm.SetClusterProviderConfig()
 }
 
 // IsValid TODO: Add Description

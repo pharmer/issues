@@ -262,7 +262,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 	log.Infof("Adding other master machines")
 	client, err := GetClusterClient(cm.ctx, cm.cluster)
 	if err != nil {
-		return nil, err
+		return acts, err
 	}
 
 	for i := 1; i < len(machines); i++ {
