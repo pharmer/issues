@@ -3,8 +3,8 @@ package gce
 import (
 	"bytes"
 	"context"
-	"fmt"
 
+	"github.com/appscode/go/log"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	. "github.com/pharmer/pharmer/cloud"
 	"github.com/pkg/errors"
@@ -61,7 +61,9 @@ func newNodeTemplateData(ctx context.Context, cluster *api.Cluster, machine *clu
 
 		cfg := ini.Empty()
 		err := cfg.Section("global").ReflectFrom(cloudConfig)
-		fmt.Println(err)
+		if err != nil {
+			log.Info(err)
+		}
 		if err != nil {
 			panic(err)
 		}

@@ -299,7 +299,9 @@ func CreateSecret(kc kubernetes.Interface, name, namespace string, data map[stri
 		}
 
 		_, err := kc.CoreV1().Secrets(namespace).Create(secret)
-		fmt.Println(err)
+		if err != nil {
+			log.Info(err)
+		}
 		return err == nil, nil
 	})
 }
@@ -320,7 +322,9 @@ func CreateNamespace(kc kubernetes.Interface, namespace string) error {
 		}
 
 		_, err := kc.CoreV1().Namespaces().Create(ns)
-		fmt.Println(err)
+		if err != nil {
+			log.Info(err)
+		}
 		return err == nil, nil
 	})
 }
@@ -336,7 +340,9 @@ func CreateConfigMap(kc kubernetes.Interface, name, namespace string, data map[s
 	return wait.PollImmediate(RetryInterval, RetryTimeout, func() (bool, error) {
 		_, err := kc.CoreV1().ConfigMaps(namespace).Create(conf)
 
-		fmt.Println(err)
+		if err != nil {
+			log.Info(err)
+		}
 		return err == nil, nil
 	})
 }
