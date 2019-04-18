@@ -268,6 +268,22 @@ func (conn *cloudConnector) deleteRolePolicy(role string) error {
 	}); err != nil {
 		Logger(conn.ctx).Infoln("Failed to delete role policy", role, err)
 	}
+
+	if role == conn.cluster.Spec.Config.Cloud.AWS.IAMProfileMaster {
+		if _, err := conn.iam.DeleteRolePolicy(&_iam.DeleteRolePolicyInput{
+			PolicyName: &conn.cluster.Spec.Config.Cloud.AWS.IAMProfileNode,
+			RoleName:   &role,
+		}); err != nil {
+			Logger(conn.ctx).Infoln("Failed to delete role policy", role, err)
+		}
+		if _, err := conn.iam.DeleteRolePolicy(&_iam.DeleteRolePolicyInput{
+			PolicyName: StringP(conn.namer.ControlPlanePolicyName()),
+			RoleName:   &role,
+		}); err != nil {
+			Logger(conn.ctx).Infoln("Failed to delete role policy", role, err)
+		}
+	}
+
 	if _, err := conn.iam.DeleteRole(&_iam.DeleteRoleInput{
 		RoleName: &role,
 	}); err != nil {
@@ -511,6 +527,7 @@ func (conn *cloudConnector) getLoadBalancer() (string, error) {
 }
 
 func (conn *cloudConnector) deleteLoadBalancer() (bool, error) {
+	log.Infof("deleting load balancer")
 	input := &elb.DeleteLoadBalancerInput{
 		LoadBalancerName: StringP(fmt.Sprintf("%s-apiserver", conn.cluster.Name)),
 	}
@@ -527,6 +544,7 @@ func (conn *cloudConnector) deleteLoadBalancer() (bool, error) {
 	}); err != nil {
 		return false, err
 	}
+	log.Infof("successfully deleted load balancer")
 	return true, nil
 }
 
@@ -1583,6 +1601,7 @@ func (conn *cloudConnector) releaseReservedIP() error {
 }
 
 func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
+	log.Infof("deleting security group")
 	return wait.PollImmediate(RetryInterval, RetryTimeout, func() (done bool, err error) {
 		r, err := conn.ec2.DescribeSecurityGroups(&_ec2.DescribeSecurityGroupsInput{
 			Filters: []*_ec2.Filter{
@@ -1611,6 +1630,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 					IpPermissions: sg.IpPermissions,
 				})
 				if err != nil {
+					log.Infof(err.Error())
 					return false, nil
 				}
 			}
@@ -1621,6 +1641,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 					IpPermissions: sg.IpPermissionsEgress,
 				})
 				if err != nil {
+					log.Infof(err.Error())
 					return false, nil
 				}
 			}
@@ -1631,9 +1652,12 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 				GroupId: sg.GroupId,
 			})
 			if err != nil {
+				log.Infof(err.Error())
 				return false, nil
 			}
 		}
+
+		log.Infof("successfully deleted security groups")
 		return true, nil
 	})
 }
@@ -1806,6 +1830,7 @@ func (conn *cloudConnector) deleteSSHKey() error {
 }
 
 func (conn *cloudConnector) deleteInstance(role string) error {
+	log.Infof("deleting instance %s", role)
 	r1, err := conn.ec2.DescribeInstances(&_ec2.DescribeInstancesInput{
 		Filters: []*_ec2.Filter{
 			{
