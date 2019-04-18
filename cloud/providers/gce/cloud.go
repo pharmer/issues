@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -327,7 +326,7 @@ func (conn *cloudConnector) waitForGlobalOperation(operation string) error {
 		attempt++
 
 		r1, err := conn.computeService.GlobalOperations.Get(conn.cluster.Spec.Config.Cloud.Project, operation).Do()
-		if err != nil {
+		if err != nil && errDeleted(err) {
 			return false, nil
 		}
 		Logger(conn.ctx).Infof("Attempt %v: Operation %v is %v ...", attempt, operation, r1.Status)
@@ -611,53 +610,6 @@ func (conn *cloudConnector) createDisk(name, diskType string, sizeGb int64) (str
 	return name, nil
 }
 
-func (conn *cloudConnector) getReserveIP() (bool, error) {
-	/*Logger(conn.ctx).Infof("Checking existence of reserved master ip ")
-	if conn.cluster.Spec.MasterReservedIP == "auto" {
-		name := conn.namer.ReserveIPName()
-
-		Logger(conn.ctx).Infof("Checking existence of reserved master ip %v", name)
-		if r1, err := conn.computeService.Addresses.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Region, name).Do(); err == nil {
-			if r1.Status == "IN_USE" {
-				return true, errors.Errorf("Found a static IP with name %v in use. Failed to reserve a new ip with the same name.", name)
-			}
-
-			Logger(conn.ctx).Debug("Found master IP was already reserved", r1, err)
-			conn.cluster.Spec.MasterReservedIP = r1.Address
-			Logger(conn.ctx).Infof("Newly reserved master ip %v", conn.cluster.Spec.MasterReservedIP)
-			return true, nil
-		}
-	} */
-	return false, nil
-
-}
-
-func (conn *cloudConnector) reserveIP() (string, error) {
-	name := conn.namer.ReserveIPName()
-	if _, err := conn.getReserveIP(); err != nil {
-		return "", err
-	}
-
-	Logger(conn.ctx).Infof("Reserving master ip %v", name)
-	r2, err := conn.computeService.Addresses.Insert(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Region, &compute.Address{Name: name}).Do()
-	Logger(conn.ctx).Debug("Reserved master IP", r2, err)
-	if err != nil {
-		return "", errors.Wrap(err, ID(conn.ctx))
-	}
-
-	err = conn.waitForRegionOperation(r2.Name)
-	if err != nil {
-		return "", errors.Wrap(err, ID(conn.ctx))
-	}
-	Logger(conn.ctx).Infof("Master ip %v reserved", name)
-	if r3, err := conn.computeService.Addresses.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Region, name).Do(); err == nil {
-		Logger(conn.ctx).Debug("Retrieved newly reserved master IP", r3, err)
-		return r3.Name, nil
-	}
-
-	return "", nil
-}
-
 func (conn *cloudConnector) getMasterInstance(machine *clusterv1.Machine) (bool, error) {
 	if r1, err := conn.computeService.Instances.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, machine.Name).Do(); err != nil {
 		Logger(conn.ctx).Debug("Retrieved master instance", r1, err)
@@ -704,8 +656,6 @@ func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster) (string, e
 		Name:        machine.Name,
 		Zone:        zone,
 		MachineType: machineType,
-		// --image-project="${MASTER_IMAGE_PROJECT}"
-		// --image "${MASTER_IMAGE}"
 		Tags: &compute.Tags{
 			Items: []string{
 				"https-server",
@@ -746,32 +696,6 @@ func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster) (string, e
 				},
 			},
 		},
-		/*
-		  "disks": [
-		    {
-		      "kind": "compute#attachedDisk",
-		      "type": "PERSISTENT",
-		      "mode": "READ_WRITE",
-		      "source": "projects/tigerworks-kube/zones/us-central1-b/disks/kubernetes-master",
-		      "deviceName": "persistent-disk-0",
-		      "index": 0,
-		      "boot": true,
-		      "autoDelete": true,
-		      "interface": "SCSI"
-		    },
-		    {
-		      "kind": "compute#attachedDisk",
-		      "type": "PERSISTENT",
-		      "mode": "READ_WRITE",
-		      "source": "projects/tigerworks-kube/zones/us-central1-b/disks/kubernetes-master-pd",
-		      "deviceName": "master-pd",
-		      "index": 1,
-		      "boot": false,
-		      "autoDelete": false,
-		      "interface": "SCSI"
-		    }
-		  ],
-		*/
 		Disks: []*compute.AttachedDisk{
 			{
 				InitializeParams: &compute.AttachedDiskInitializeParams{
@@ -791,22 +715,6 @@ func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster) (string, e
 		},
 	}
 
-	/*
-		if ng.Spec.Template.Spec.ExternalIPType == api.IPTypeReserved {
-			instance.NetworkInterfaces[0].AccessConfigs = []*compute.AccessConfig{
-				{
-					NatIP: conn.cluster.Status.ReservedIPs[0].IP,
-				},
-			}
-		} else {
-			instance.NetworkInterfaces[0].AccessConfigs = []*compute.AccessConfig{
-				{
-					Name: "Master External IP",
-					Type: "ONE_TO_ONE_NAT",
-				},
-			}
-		}
-	*/
 	r1, err := conn.computeService.Instances.Insert(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, instance).Do()
 	Logger(conn.ctx).Debug("Created master instance", r1, err)
 
@@ -817,343 +725,6 @@ func (conn *cloudConnector) createMasterIntance(cluster *api.Cluster) (string, e
 	Logger(conn.ctx).Infof("Master instance of type %v in zone %v is created", machineType, zone)
 
 	return r1.Name, nil
-}
-
-// Instance
-func (conn *cloudConnector) getInstance(instance string) (*api.NodeInfo, error) {
-	Logger(conn.ctx).Infof("Retrieving instance %v in zone %v", instance, conn.cluster.Spec.Config.Cloud.Zone)
-	r1, err := conn.computeService.Instances.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, instance).Do()
-	Logger(conn.ctx).Debug("Retrieved instance", r1, err)
-	if err != nil {
-		return nil, err
-	}
-	return conn.newKubeInstance(r1)
-}
-
-func (conn *cloudConnector) listInstances(instanceGroup string) ([]*api.NodeInfo, error) {
-	Logger(conn.ctx).Infof("Retrieving instances in node group %v", instanceGroup)
-	instances := make([]*api.NodeInfo, 0)
-	r1, err := conn.computeService.InstanceGroups.ListInstances(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, instanceGroup, &compute.InstanceGroupsListInstancesRequest{
-		InstanceState: "ALL",
-	}).Do()
-	Logger(conn.ctx).Debug("Retrieved instance", r1, err)
-	if err != nil {
-		return nil, errors.Wrap(err, ID(conn.ctx))
-	}
-
-	for _, item := range r1.Items {
-		name := item.Instance[strings.LastIndex(item.Instance, "/")+1:]
-		r2, err := conn.computeService.Instances.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, name).Do()
-		if err != nil {
-			return nil, errors.Wrap(err, ID(conn.ctx))
-		}
-		instance, err := conn.newKubeInstance(r2)
-		if err != nil {
-			return nil, errors.Wrap(err, ID(conn.ctx))
-		}
-		//		instance.Spec.Role = api.RoleNode
-		instances = append(instances, instance)
-	}
-	return instances, nil
-}
-
-func (conn *cloudConnector) newKubeInstance(r1 *compute.Instance) (*api.NodeInfo, error) {
-	for _, accessConfig := range r1.NetworkInterfaces[0].AccessConfigs {
-		if accessConfig.Type == "ONE_TO_ONE_NAT" {
-			i := api.NodeInfo{
-				Name:       r1.Name,
-				ExternalID: strconv.FormatUint(r1.Id, 10),
-				PublicIP:   accessConfig.NatIP,
-				PrivateIP:  r1.NetworkInterfaces[0].NetworkIP,
-			}
-
-			/*
-				// Status: [Output Only] The status of the instance. One of the
-				// following values: PROVISIONING, STAGING, RUNNING, STOPPING,
-				// SUSPENDED, SUSPENDING, and TERMINATED.
-				//
-				// Possible values:
-				//   "PROVISIONING"
-				//   "RUNNING"
-				//   "STAGING"
-				//   "STOPPED"
-				//   "STOPPING"
-				//   "SUSPENDED"
-				//   "SUSPENDING"
-				//   "TERMINATED"
-			*/
-
-			return &i, nil
-		}
-	}
-	return nil, errors.Errorf("[%s] failed to convert gcloud instance to KubeInstance.", ID(conn.ctx))
-}
-
-func (conn *cloudConnector) getNodeFirewallRule() (bool, error) {
-	name := conn.cluster.Name + "-node-all"
-	if r1, err := conn.computeService.Firewalls.Get(conn.cluster.Spec.Config.Cloud.Project, name).Do(); err != nil {
-		Logger(conn.ctx).Debug("Retrieved node firewall rule", r1, err)
-		return false, err
-	}
-	return true, nil
-}
-
-func (conn *cloudConnector) createNodeFirewallRule() (string, error) {
-	/*
-		name := conn.cluster.Name + "-node-all"
-		network := fmt.Sprintf("projects/%v/global/networks/%v", conn.cluster.Spec.Config.Cloud.Project, defaultNetwork)
-
-		r1, err := conn.computeService.Firewalls.Insert(conn.cluster.Spec.Config.Cloud.Project, &compute.Firewall{
-			Name:         name,
-			Network:      network,
-			SourceRanges: []string{conn.cluster.Spec.Networking.PodSubnet},
-			TargetTags:   []string{conn.cluster.Name + "-node"},
-			Allowed: []*compute.FirewallAllowed{
-				{
-					IPProtocol: "tcp",
-				},
-				{
-					IPProtocol: "udp",
-				},
-				{
-					IPProtocol: "icmp",
-				},
-				{
-					IPProtocol: "esp",
-				},
-				{
-					IPProtocol: "ah",
-				},
-				{
-					IPProtocol: "sctp",
-				},
-			},
-		}).Do()
-		Logger(conn.ctx).Debug("Created firewall rule", r1, err)
-		if err != nil {
-			return "", errors.Wrap(err, ID(conn.ctx))
-		}
-		Logger(conn.ctx).Infof("Node firewall rule %v created", name)
-		return r1.Name, nil */
-
-	return "", nil
-}
-
-func (conn *cloudConnector) createNodeInstanceTemplate(ng *clusterv1.Machine, token string) (string, error) {
-	/*
-		templateName := conn.namer.InstanceTemplateName(ng.Spec.Template.Spec.SKU)
-
-		Logger(conn.ctx).Infof("Retrieving node template %v", templateName)
-		if r1, err := conn.computeService.InstanceTemplates.Get(conn.cluster.Spec.Config.Cloud.Project, templateName).Do(); err == nil {
-			Logger(conn.ctx).Debug("Retrieved node template", r1, err)
-
-			Logger(conn.ctx).Infof("Deleting node template %v", templateName)
-			if r2, err := conn.computeService.InstanceTemplates.Delete(conn.cluster.Spec.Config.Cloud.Project, templateName).Do(); err != nil {
-				Logger(conn.ctx).Debug("Delete node template called", r2, err)
-				Logger(conn.ctx).Infoln("Failed to delete existing instance template")
-				return "", err
-			}
-		}
-		//  if cluster.Spec.ctx.Preemptiblenode == "true" {
-		//	  preemptible_nodes = "--preemptible --maintenance-policy TERMINATE"
-		//  }
-
-		script, err := conn.renderStartupScript(ng, token)
-		if err != nil {
-			return "", err
-		}
-		pubKey := string(SSHKey(conn.ctx).PublicKey)
-		value := fmt.Sprintf("%v:%v %v", conn.namer.AdminUsername(), pubKey, conn.namer.AdminUsername())
-		image := fmt.Sprintf("projects/%v/global/images/%v", conn.cluster.Spec.Config.Cloud.InstanceImageProject, conn.cluster.Spec.Config.Cloud.InstanceImage)
-		network := fmt.Sprintf("projects/%v/global/networks/%v", conn.cluster.Spec.Config.Cloud.Project, defaultNetwork)
-
-		Logger(conn.ctx).Infof("Create instance template %v", templateName)
-		tpl := &compute.InstanceTemplate{
-			Name: templateName,
-			Properties: &compute.InstanceProperties{
-				MachineType: ng.Spec.Template.Spec.SKU,
-				Scheduling: &compute.Scheduling{
-					AutomaticRestart:  types.FalseP(),
-					OnHostMaintenance: "TERMINATE",
-				},
-				Disks: []*compute.AttachedDisk{
-					{
-						AutoDelete: true,
-						Boot:       true,
-						InitializeParams: &compute.AttachedDiskInitializeParams{
-							DiskType:    ng.Spec.Template.Spec.DiskType,
-							DiskSizeGb:  ng.Spec.Template.Spec.DiskSize,
-							SourceImage: image,
-						},
-					},
-				},
-				Tags: &compute.Tags{
-					Items: []string{conn.cluster.Name + "-node"},
-				},
-				NetworkInterfaces: []*compute.NetworkInterface{
-					{
-						Network: network,
-						//AccessConfigs: []*compute.AccessConfig{
-						//	{
-						//		Name: "External IP",
-						//		Type: "ONE_TO_ONE_NAT",
-						//	},
-						//},
-					},
-				},
-				ServiceAccounts: []*compute.ServiceAccount{
-					{
-						Scopes: []string{
-							"https://www.googleapis.com/auth/compute",
-							"https://www.googleapis.com/auth/devstorage.read_only",
-							"https://www.googleapis.com/auth/logging.write",
-						},
-						Email: "default",
-					},
-				},
-				CanIpForward: true,
-				Metadata: &compute.Metadata{
-					Items: []*compute.MetadataItems{
-						{
-							Key:   "startup-script",
-							Value: types.StringP(script),
-						},
-						{
-							Key:   "ssh-keys",
-							Value: &value,
-						},
-					},
-				},
-			},
-		}
-		// if conn.cluster.Spec.EnableNodePublicIP {
-		tpl.Properties.NetworkInterfaces[0].AccessConfigs = []*compute.AccessConfig{
-			{
-				Name: "Node External IP",
-				Type: "ONE_TO_ONE_NAT",
-			},
-		}
-		// }
-		r1, err := conn.computeService.InstanceTemplates.Insert(conn.cluster.Spec.Config.Cloud.Project, tpl).Do()
-		Logger(conn.ctx).Debug("Create instance template called", r1, err)
-		if err != nil {
-			return "", errors.Wrap(err, ID(conn.ctx))
-		}
-		Logger(conn.ctx).Infof("Node instance template %v created for sku %v", templateName, ng.Spec.Template.Spec.SKU)
-		return r1.Name, nil */
-	return "", nil
-}
-
-func (conn *cloudConnector) createNodeGroup(ng *clusterv1.Machine) (string, error) {
-	/*
-		template := fmt.Sprintf("projects/%v/global/instanceTemplates/%v", conn.cluster.Spec.Config.Cloud.Project, conn.namer.InstanceTemplateName(ng.Spec.Template.Spec.SKU))
-
-		Logger(conn.ctx).Infof("Creating instance group %v from template %v", ng.Name, template)
-		r1, err := conn.computeService.InstanceGroupManagers.Insert(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, &compute.InstanceGroupManager{
-			Name:             ng.Name,
-			BaseInstanceName: rand.WithUniqSuffix(ng.Name),
-			TargetSize:       ng.Spec.Nodes,
-			InstanceTemplate: template,
-		}).Do()
-		Logger(conn.ctx).Debug("Create instance group called", r1, err)
-		if err != nil {
-			return "", errors.Wrap(err, ID(conn.ctx))
-		}
-		Logger(conn.ctx).Infof("Instance group %v created with %v nodes of %v sku", ng.Name, ng.Spec.Nodes, ng.Spec.Template.Spec.SKU)
-		return r1.Name, nil */
-	return "", nil
-}
-
-// Not used since Cluster 1.3
-/*func (conn *cloudConnector) createAutoscaler(ng *clusterv1.Machine) (string, error) {
-	target := fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%v/zones/%v/instanceGroupManagers/%v", conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, ng.Name)
-
-	Logger(conn.ctx).Infof("Creating auto scaler %v for instance group %v", ng.Name, target)
-	r1, err := conn.computeService.Autoscalers.Insert(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, &compute.Autoscaler{
-		Name:   ng.Name,
-		Target: target,
-		AutoscalingPolicy: &compute.AutoscalingPolicy{
-			MinNumReplicas: int64(1),
-			MaxNumReplicas: ng.Spec.Nodes,
-		},
-	}).Do()
-	Logger(conn.ctx).Debug("Create auto scaler called", r1, err)
-	if err != nil {
-		return "", errors.Wrap(err, ID(conn.ctx))
-	}
-	Logger(conn.ctx).Infof("Auto scaler %v for instance group %v created", ng.Name, target)
-	return r1.Name, nil
-}*/
-
-func (conn *cloudConnector) deleteOnlyNodeGroup(instanceGroupName, template string) error {
-	_, err := conn.computeService.InstanceGroupManagers.ListManagedInstances(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, instanceGroupName).Do()
-	if err != nil {
-		Logger(conn.ctx).Infof("Error on getting nodegroup list. Reason: %v", err)
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-
-	r1, err := conn.computeService.InstanceGroupManagers.Delete(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, instanceGroupName).Do()
-	if err != nil {
-		Logger(conn.ctx).Infof("Error on deleting nodegroup. Reason: %v", err)
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	operation := r1.Name
-	conn.waitForZoneOperation(operation)
-	Logger(conn.ctx).Infof("Instance group %v is deleted", instanceGroupName)
-	Logger(conn.ctx).Infof("Instance template %v is deleting", template)
-	if err = conn.deleteInstanceTemplate(template); err != nil {
-		Logger(conn.ctx).Infof("Error on deleting instance template. Reason: %v", err)
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	Logger(conn.ctx).Infof("Instance template %v is deleted", template)
-	return nil
-}
-
-//delete template
-func (conn *cloudConnector) deleteInstanceTemplate(template string) error {
-	op, err := conn.computeService.InstanceTemplates.Delete(conn.cluster.Spec.Config.Cloud.Project, template).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	return conn.waitForGlobalOperation(op.Name)
-}
-
-func (conn *cloudConnector) deleteGroupInstances(ng *clusterv1.Machine, instance string) error {
-	req := &compute.InstanceGroupManagersDeleteInstancesRequest{
-		Instances: []string{
-			fmt.Sprintf("zones/%v/instances/%v", conn.cluster.Spec.Config.Cloud.Zone, instance),
-		},
-	}
-	r, err := conn.computeService.InstanceGroupManagers.DeleteInstances(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, ng.Name, req).Do()
-	fmt.Println(r, err)
-	if err != nil {
-		return err
-	}
-	if err = conn.waitForZoneOperation(r.Name); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (conn *cloudConnector) addNodeIntoGroup(ng *clusterv1.Machine, size int64) error {
-	_, err := conn.computeService.InstanceGroupManagers.ListManagedInstances(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, ng.Name).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	//sz := int64(len(r.ManagedInstances))
-	resp, err := conn.computeService.InstanceGroupManagers.Resize(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, ng.Name, size).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	conn.waitForZoneOperation(resp.Name)
-	fmt.Println(resp.Name)
-	Logger(conn.ctx).Infof("Instance group %v resized", ng.Name)
-	/*err = WaitForReadyNodes(conn.ctx, size-sz)
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}*/
-	return nil
 }
 
 func (conn *cloudConnector) deleteMaster(machines []*clusterv1.Machine) error {
@@ -1250,25 +821,6 @@ func (conn *cloudConnector) deleteDisk(nodeDiskNames []string) error {
 	return allerr
 }
 
-func (conn *cloudConnector) deleteRoutes() error {
-	r1, err := conn.computeService.Routes.List(conn.cluster.Spec.Config.Cloud.Project).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	for i := range r1.Items {
-		routeName := r1.Items[i].Name
-		if strings.HasPrefix(routeName, conn.cluster.Name) {
-			fmt.Println(routeName)
-			r2, err := conn.computeService.Routes.Delete(conn.cluster.Spec.Config.Cloud.Project, routeName).Do()
-			if err != nil {
-				return errors.Wrap(err, ID(conn.ctx))
-			}
-			Logger(conn.ctx).Infof("Route %v deleted, response %v", routeName, r2.Status)
-		}
-	}
-	return nil
-}
-
 //delete firewalls
 // ruleClusterInternal := cluster.Name + firewallRuleInternalSuffix
 // ruleSSH := cluster.Name + "-allow-ssh"
@@ -1307,82 +859,4 @@ func (conn *cloudConnector) deleteFirewalls() error {
 	}
 	time.Sleep(3 * time.Second)
 	return nil
-}
-
-// delete reserve ip
-func (conn *cloudConnector) releaseReservedIP() error {
-	name := conn.namer.ReserveIPName()
-	r1, err := conn.computeService.Addresses.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Region, name).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	Logger(conn.ctx).Infof("Releasing reserved master ip %v", r1.Address)
-	r2, err := conn.computeService.Addresses.Delete(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Region, name).Do()
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	err = conn.waitForRegionOperation(r2.Name)
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	Logger(conn.ctx).Infof("Master ip %v released", r1.Address)
-	return nil
-}
-
-func (conn *cloudConnector) getExistingInstanceTemplate(ng *clusterv1.Machine) (string, error) {
-	ig, err := conn.computeService.InstanceGroupManagers.Get(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, ng.Name).Do()
-	if err != nil {
-		return "", err
-	}
-	//"instanceTemplate": "https://www.googleapis.com/compute/v1/projects/k8s-qa/global/instanceTemplates/gc1-n1-standard-2-v1508392105708944214",
-	matches := templateNameRE.FindStringSubmatch(ig.InstanceTemplate)
-	if len(matches) != 3 {
-		return "", errors.New("error splitting providerID")
-	}
-	return matches[2], nil
-}
-
-//Node template update
-func (conn *cloudConnector) updateNodeGroupTemplate(ng *clusterv1.Machine, token string) error {
-	op, err := conn.createNodeInstanceTemplate(ng, token)
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	err = conn.waitForGlobalOperation(op)
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-	oldInstanceTemplate, err := conn.getExistingInstanceTemplate(ng)
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-
-	newInstanceTemplate := &compute.InstanceGroupManagersSetInstanceTemplateRequest{
-		//InstanceTemplate: fmt.Sprintf("projects/%v/global/instanceTemplates/%v", conn.cluster.Spec.Config.Cloud.Project, conn.namer.InstanceTemplateName(ng.Spec.Template.Spec.SKU)),
-	}
-	op2, err := conn.computeService.InstanceGroupManagers.SetInstanceTemplate(conn.cluster.Spec.Config.Cloud.Project, conn.cluster.Spec.Config.Cloud.Zone, ng.Name, newInstanceTemplate).Do()
-	if err != nil {
-		return err
-	}
-	if err = conn.waitForZoneOperation(op2.Name); err != nil {
-		return err
-	}
-
-	err = conn.deleteInstanceTemplate(oldInstanceTemplate)
-	if err != nil {
-		return errors.Wrap(err, ID(conn.ctx))
-	}
-
-	return nil
-}
-
-// splitProviderID splits a provider's id into core components.
-// A providerID is build out of '${ProviderName}://${project-id}/${zone}/${instance-name}'
-// ref: https://github.com/kubernetes/kubernetes/blob/0b9efaeb34a2fc51ff8e4d34ad9bc6375459c4a4/pkg/cloudprovider/providers/gce/gce_util.go#L156
-func splitProviderID(providerID string) (project, zone, instance string, err error) {
-	matches := providerIdRE.FindStringSubmatch(providerID)
-	if len(matches) != 4 {
-		return "", "", "", errors.New("error splitting providerID")
-	}
-	return matches[1], matches[2], matches[3], nil
 }
