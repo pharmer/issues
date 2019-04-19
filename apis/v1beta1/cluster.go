@@ -34,6 +34,7 @@ type PharmerClusterSpec struct {
 }
 
 type ClusterConfig struct {
+	MasterCount          int       `json:"masterCount"`
 	Cloud                CloudSpec `json:"cloud" protobuf:"bytes,1,opt,name=cloud"`
 	KubernetesVersion    string    `json:"kubernetesVersion,omitempty" protobuf:"bytes,4,opt,name=kubernetesVersion"`
 	Locked               bool      `json:"locked,omitempty" protobuf:"varint,5,opt,name=locked"`
@@ -188,11 +189,13 @@ type CloudStatus struct {
 	SShKeyExternalID string       `json:"sshKeyExternalID,omitempty" protobuf:"bytes,1,opt,name=sshKeyExternalID"`
 	AWS              *AWSStatus   `json:"aws,omitempty" protobuf:"bytes,2,opt,name=aws"`
 	EKS              *EKSStatus   `json:"eks,omitempty" protobuf:"bytes,2,opt,name=eks"`
-	Azure            *AzureStatus `json:"azure,omitempty"`
+	LoadBalancer     LoadBalancer `json:"loadBalancer,omitempty"`
 }
 
-type AzureStatus struct {
-	LBDNS string `json:"lbDNS,omitempty"`
+type LoadBalancer struct {
+	DNS  string `json:"dns"`
+	IP   string `json:"ip"`
+	Port int    `json:"port"`
 }
 
 type AWSStatus struct {
@@ -200,6 +203,8 @@ type AWSStatus struct {
 	NodeSGId    string `json:"nodeSGID,omitempty" protobuf:"bytes,2,opt,name=nodeSGID"`
 	BastionSGId string `json:"bastionSGID,omitempty"`
 
+	// Depricaed
+	// TODO: REMOVE
 	LBDNS string `json:"lbDNS,omitempty"`
 }
 

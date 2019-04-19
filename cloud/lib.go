@@ -7,6 +7,7 @@ import (
 	"time"
 
 	. "github.com/appscode/go/types"
+	"github.com/pharmer/pharmer/apis/v1beta1"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pharmer/pharmer/cloud/cmds/options"
 	"github.com/pkg/errors"
@@ -67,25 +68,32 @@ func Create(ctx context.Context, cluster *api.Cluster, owner string) (*api.Clust
 	if ctx, err = CreateCACertificates(ctx, cluster, owner); err != nil {
 		return nil, err
 	}
+	if ctx, err = CreateServiceAccountKey(ctx, cluster, owner); err != nil {
+		return nil, err
+	}
+	if ctx, err = CreateEtcdCertificates(ctx, cluster, owner); err != nil {
+		return nil, err
+	}
 	if ctx, err = CreateSSHKey(ctx, cluster, owner); err != nil {
 		return nil, err
 	}
 
 	if !managedProviders.Has(cluster.ClusterConfig().Cloud.CloudProvider) {
-		master, err := CreateMasterMachines(ctx, cluster)
-		if err != nil {
-			return nil, err
-		}
-		if _, err = Store(ctx).Owner(owner).Machine(cluster.Name).Create(master); err != nil {
-			return nil, err
+		for i := 0; i < cluster.Spec.Config.MasterCount; i++ {
+			master, err := CreateMasterMachines(ctx, cluster, i)
+			if err != nil {
+				return nil, err
+			}
+			if _, err = Store(ctx).Owner(owner).Machine(cluster.Name).Create(master); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	return Store(ctx).Owner(owner).Clusters().Update(cluster)
-
 }
 
-func CreateMasterMachines(ctx context.Context, cluster *api.Cluster) (*clusterapi.Machine, error) {
+func CreateMasterMachines(ctx context.Context, cluster *api.Cluster, index int) (*clusterapi.Machine, error) {
 	cm, err := GetCloudManager(cluster.ClusterConfig().Cloud.CloudProvider, ctx)
 	if err != nil {
 		return nil, err
@@ -101,7 +109,7 @@ func CreateMasterMachines(ctx context.Context, cluster *api.Cluster) (*clusterap
 	}*/
 	machine := &clusterapi.Machine{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%v-master", cluster.Name),
+			Name: fmt.Sprintf("%v-master-%v", cluster.Name, index),
 			//	UID:               uuid.NewUUID(),
 			CreationTimestamp: metav1.Time{Time: time.Now()},
 			Labels: map[string]string{
@@ -300,7 +308,6 @@ func Apply(ctx context.Context, opts *options.ApplyConfig) ([]api.Action, error)
 	if err != nil {
 		return nil, errors.Errorf("cluster `%s` does not exist. Reason: %v", opts.ClusterName, err)
 	}
-	fmt.Println("KO")
 
 	cm, err := GetCloudManager(cluster.ClusterConfig().Cloud.CloudProvider, ctx)
 	if err != nil {
@@ -393,6 +400,14 @@ func GetKubernetesClient(ctx context.Context, cluster *api.Cluster, owner string
 	config := api.NewRestConfig(kubeConifg)
 
 	return kubernetes.NewForConfig(config)
+}
+
+func GetLeaderMachine(ctx context.Context, cluster *v1beta1.Cluster, owner string) (*clusterapi.Machine, error) {
+	machine, err := Store(ctx).Owner(owner).Machine(cluster.Name).Get(cluster.Name + "-master-0")
+	if err != nil {
+		return nil, err
+	}
+	return machine, nil
 }
 
 /*func GetSSHConfig(ctx context.Context, hostip string) *api.SSHConfig {
