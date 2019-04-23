@@ -1600,6 +1600,12 @@ func (conn *cloudConnector) releaseReservedIP() error {
 
 func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 	log.Infof("deleting security group")
+
+	if vpcID == "" {
+		log.Infof("vpc-id is empty, vpc already deleted")
+		return nil
+	}
+
 	return wait.PollImmediate(RetryInterval, RetryTimeout, func() (done bool, err error) {
 		r, err := conn.ec2.DescribeSecurityGroups(&_ec2.DescribeSecurityGroupsInput{
 			Filters: []*_ec2.Filter{
@@ -1618,6 +1624,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 			},
 		})
 		if err != nil {
+			log.Infof("failed to list securit groups: %v", err)
 			return false, nil
 		}
 
@@ -1628,7 +1635,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 					IpPermissions: sg.IpPermissions,
 				})
 				if err != nil {
-					log.Infof(err.Error())
+					log.Infof("failed to delete security group IpPermissions: %v", err)
 					return false, nil
 				}
 			}
@@ -1639,7 +1646,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 					IpPermissions: sg.IpPermissionsEgress,
 				})
 				if err != nil {
-					log.Infof(err.Error())
+					log.Infof("failed to delete security group IpPermissionsEgress: %v", err)
 					return false, nil
 				}
 			}
@@ -1650,7 +1657,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 				GroupId: sg.GroupId,
 			})
 			if err != nil {
-				log.Infof(err.Error())
+				log.Infof("failed to delete security group %s: %v", sg.GroupName, err)
 				return false, nil
 			}
 		}
@@ -1775,6 +1782,11 @@ func (conn *cloudConnector) deleteRouteTable(vpcID string) error {
 }
 
 func (conn *cloudConnector) deleteNatGateway(natID string) error {
+	if natID == "" {
+		log.Infof("NAT already deleted, exiting")
+		return nil
+	}
+
 	if _, err := conn.ec2.DeleteNatGateway(&ec2.DeleteNatGatewayInput{
 		NatGatewayId: StringP(natID),
 	}); err != nil {
