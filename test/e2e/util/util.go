@@ -39,28 +39,29 @@ func runCommand(cmd string, args ...string) error {
 
 func WaitForNodeReady(kc kubernetes.Interface, numNodes int32) error {
 	var (
-		nodes      []corev1.Node
+		nodes         []corev1.Node
 		numReadyNodes int32
 	)
 
 	count := 1
 	if err := wait.Poll(5*time.Second, 15*time.Minute, func() (bool, error) {
-		fmt.Println("Attempt",count,": Waiting for the Nodes to be Ready . . . .")
+		fmt.Println("Attempt", count, ": Waiting for the Nodes to be Ready . . . .")
 		nl, err := kc.CoreV1().Nodes().List(metav1.ListOptions{})
 		if err != nil {
 			return false, err
 		}
 		nodes = nl.Items
 		numReadyNodes = 0
-	Nodes:
+
 		for _, node := range nodes {
-			_, ok := node.Labels["node-role.kubernetes.io/master"];if ok{
+			_, ok := node.Labels["node-role.kubernetes.io/master"]
+			if ok {
 				continue
 			}
 
 			for _, taint := range node.Spec.Taints {
 				if taint.Key == "node.cloudprovider.kubernetes.io/uninitialized" {
-					continue Nodes
+					continue
 				}
 			}
 
@@ -88,7 +89,7 @@ func KubeClient() (kubernetes.Interface, error) {
 	return kubernetes.NewForConfig(config)
 }
 
-func ClusterApiClient() (clientset.Interface, error){
+func ClusterApiClient() (clientset.Interface, error) {
 	kubeconfig := kubeConfigPath()
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {

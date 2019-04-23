@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -o xtrace
+set -eoux pipefail
 
 export PROVIDER="$1"
 export export CREDENTIAL="$2"

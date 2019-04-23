@@ -20,37 +20,40 @@ var provider = flag.String("provider", "", "Provider name")
 var zone = flag.String("zone", "", "Zones name")
 var nodes = flag.String("nodes", "", "Node type")
 var file = flag.String("from-file", "", "File path for GoogleCloud credential")
+var masters = flag.String("masters", "1", "No of masters")
+var dev = flag.Bool("debug", false, "Dev")
 var cluster string
 
 var (
 	KUBERNETES_VERSION string
-	err error
+	err                error
 )
 
 var providers = make(map[string]string, 10)
-func init(){
+
+func init() {
 	providers = map[string]string{
-		"linode": "Linode",
-		"aks" : "Azure",
-		"azure" : "Azure",
-		"aws" : "AWS",
-		"eks" : "AWS",
-		"digitalocean" : "DigitalOcean",
-		"gce" : "GoogleCloud",
-		"gke" : "GoogleCloud",
-		"packet" : "Packet",
-		"vultr" : "Vultr",
+		"linode":       "Linode",
+		"aks":          "Azure",
+		"azure":        "Azure",
+		"aws":          "AWS",
+		"eks":          "AWS",
+		"digitalocean": "DigitalOcean",
+		"gce":          "GoogleCloud",
+		"gke":          "GoogleCloud",
+		"packet":       "Packet",
+		"vultr":        "Vultr",
 	}
 }
 
 var createCredential = func() {
-	By("Creating "+*provider+" Credential")
+	By("Creating " + *provider + " Credential")
 	err = RunScript("/create_credential.sh", providers[*provider], *provider, *file)
 	Expect(err).NotTo(HaveOccurred())
 }
 
 var deleteCredential = func() {
-	By("Deleting "+*provider+" Credential")
+	By("Deleting " + *provider + " Credential")
 	err = RunScript("/delete_credential.sh", providers[*provider], *provider)
 	Expect(err).NotTo(HaveOccurred())
 }

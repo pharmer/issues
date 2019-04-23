@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -o xtrace
+set -eoux pipefail
 
 export CLUSTER_NAME="$1"
 

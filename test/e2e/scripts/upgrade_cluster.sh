@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -o xtrace
+set -eoux pipefail
 
 export KUBERNETES_VERSION="$1"
 export CLUSTER_NAME="$2"

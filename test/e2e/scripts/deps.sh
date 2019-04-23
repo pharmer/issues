@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -o xtrace
+set -eoux pipefail
 
 echo -e "\e[92mInstalling Dependencies ...\e[0m"
 

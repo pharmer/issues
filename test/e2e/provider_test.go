@@ -20,7 +20,7 @@ var _ = Describe(*provider, func() {
 
 	var createCluster = func(kv string) {
 		By("Running create_cluster.sh")
-		err := RunScript("/create_cluster.sh", kv, cluster, *provider, *zone, *nodes, replicas)
+		err := RunScript("/create_cluster.sh", kv, cluster, *provider, *zone, *nodes, replicas, *masters)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Getting KubeConfig")
@@ -42,7 +42,7 @@ var _ = Describe(*provider, func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Updating Machines")
-		for _, machineSet := range machineSets.Items{
+		for _, machineSet := range machineSets.Items {
 			machineSet.Spec.Replicas = &n
 			_, err = caClient.ClusterV1alpha1().MachineSets(metav1.NamespaceDefault).Update(&machineSet)
 			Expect(err).NotTo(HaveOccurred())
@@ -52,19 +52,19 @@ var _ = Describe(*provider, func() {
 		kc, err := KubeClient()
 		Expect(err).NotTo(HaveOccurred())
 
-		By("Waiting for "+string(n)+" Nodes to become ready")
+		By("Waiting for " + string(n) + " Nodes to become ready")
 
 		err = WaitForNodeReady(kc, n)
 		return err
 	}
 
-	var upgradeCluster = func() error{
+	var upgradeCluster = func() error {
 		By("Running upgrade_cluster.sh")
 		err := RunScript("/upgrade_cluster.sh", *kv2, cluster)
 		return err
 	}
 
-	var deleteCluster = func() error{
+	var deleteCluster = func() error {
 		By("Running delete_cluster.sh")
 		err := RunScript("/delete_cluster.sh", cluster)
 		return err
@@ -75,6 +75,7 @@ var _ = Describe(*provider, func() {
 	})
 
 	AfterEach(func() {
+		Skip("skipping deleting cluster")
 		By("Deleting Cluster")
 		err = deleteCluster()
 		Expect(err).NotTo(HaveOccurred())
