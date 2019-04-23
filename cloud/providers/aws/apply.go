@@ -758,10 +758,12 @@ func (cm *ClusterManager) applyDelete(dryRun bool) ([]api.Action, error) {
 
 	vpcID := clusterSpec.NetworkSpec.VPC.ID
 	var natID string
-	if clusterSpec.NetworkSpec.Subnets[0].NatGatewayID != nil {
-		natID = *clusterSpec.NetworkSpec.Subnets[0].NatGatewayID
-	} else {
-		natID = *clusterSpec.NetworkSpec.Subnets[0].NatGatewayID
+	if len(clusterSpec.NetworkSpec.Subnets) > 0 {
+		if clusterSpec.NetworkSpec.Subnets[0].NatGatewayID != nil {
+			natID = *clusterSpec.NetworkSpec.Subnets[0].NatGatewayID
+		} else {
+			natID = *clusterSpec.NetworkSpec.Subnets[0].NatGatewayID
+		}
 	}
 
 	if !dryRun {
