@@ -8,7 +8,7 @@ import (
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	packetconfig "github.com/pharmer/pharmer/apis/v1beta1/packet"
 	. "github.com/pharmer/pharmer/cloud"
-	"github.com/pharmer/pharmer/data/files"
+	// "github.com/pharmer/pharmer/data/files"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

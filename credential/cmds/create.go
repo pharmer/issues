@@ -11,7 +11,7 @@ import (
 	"github.com/pharmer/pharmer/cloud"
 	"github.com/pharmer/pharmer/config"
 	"github.com/pharmer/pharmer/credential/cmds/options"
-	"github.com/pharmer/pharmer/data/files"
+	// "github.com/pharmer/pharmer/data/files"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
