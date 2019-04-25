@@ -9,7 +9,6 @@ import (
 	"github.com/appscode/go/log"
 	stringz "github.com/appscode/go/strings"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
-	apiAlpha "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +36,7 @@ func NodeCount(machineSets []*clusterv1.MachineSet) int64 {
 	return count
 }
 
-func FindMasterNodeGroup(nodeGroups []*apiAlpha.NodeGroup) (*apiAlpha.NodeGroup, error) {
+func FindMasterNodeGroup(nodeGroups []*api.NodeGroup) (*api.NodeGroup, error) {
 	for _, ng := range nodeGroups {
 		if ng.IsMaster() {
 			return ng, nil
