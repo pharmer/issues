@@ -1,19 +1,20 @@
-hash: dc0cd3364702a47c3924800518a314c0de1ac322f6236bf1192353f1317b89d0
-updated: 2019-03-29T17:53:55.464356693+06:00
+hash: 4fabc53775763ed90effda184e47242815a72f2a054cc7e4b39ea7176e1a86bf
+updated: 2019-04-24T21:53:03.718003276-07:00
 imports:
 - name: cloud.google.com/go
   version: 0fd7230b2a7505833d5f69b75cbd6c9582401479
   subpackages:
   - compute/metadata
 - name: contrib.go.opencensus.io/exporter/ocagent
-  version: 25f67030b05d75c23acfd7f7e7f5b604b820fbef
+  version: 44fbaec75354d0135f5db348b97a811ee0120dce
 - name: github.com/appscode/go
-  version: 52eaa8008e2e5fe8df77ac6fb2fd45e3ea2ae47c
+  version: 60025f1135c977fecd189c12dbfa259d837d7a18
   subpackages:
   - analytics
   - context
   - crypto/rand
   - crypto/ssh
+  - encoding/json/types
   - encoding/yaml
   - env
   - flags
@@ -34,6 +35,8 @@ imports:
   version: c038e08b19b1c760484d443de8958880e35bd879
 - name: github.com/appscode/go-version
   version: 7aba545c679b0f45679eeb406dc662d2c8a04c26
+- name: github.com/appscode/jsonpatch
+  version: 7c0e3b262f30165a8ec3d0b4c6059fd92703bfb2
 - name: github.com/aws/aws-sdk-go
   version: fde4ded7becdeae4d26bf1212916aabba79349b4
   subpackages:
@@ -76,7 +79,6 @@ imports:
   - service/eks
   - service/elb
   - service/iam
-  - service/lightsail
   - service/s3
   - service/s3/s3iface
   - service/s3/s3manager
@@ -171,6 +173,8 @@ imports:
   version: d6023ce2651d8eafb5c75bb0c7167536102ec9f5
 - name: github.com/fatih/color
   version: 9aae6aaa22315390f03959adca2c4d395b02fcef
+- name: github.com/fatih/structs
+  version: 878a968ab22548362a09bdb3322f98b00f470d46
 - name: github.com/fsnotify/fsnotify
   version: 1485a34d5d5723fea214f5710708e19a831720e4
 - name: github.com/ghodss/yaml
@@ -190,7 +194,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: 5899d5c5e619fda5fa86e14795a835f473ca284c
 - name: github.com/go-xorm/builder
-  version: 1d658d7596c25394aab557ef5b50ef35bf706384
+  version: 145c9968bfe732a56d7160439d25154c5aaa2f35
 - name: github.com/go-xorm/core
   version: c10e21e7e1cec20e09398f2dfae385e58c8df555
 - name: github.com/go-xorm/xorm
@@ -227,6 +231,12 @@ imports:
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/go-cmp
   version: 6f77996f0c42f7b84e5a2b252227263f93432e9b
+  subpackages:
+  - cmp
+  - cmp/internal/diff
+  - cmp/internal/flags
+  - cmp/internal/function
+  - cmp/internal/value
 - name: github.com/google/go-querystring
   version: c8c88dbee036db4e4808d1f2ec8c2e15e11c3f80
   subpackages:
@@ -234,7 +244,7 @@ imports:
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/google/uuid
-  version: 0cd6bf5da1e1c83f8b45653022c74f71af0538a4
+  version: 8c31c18f31ede9fc8eae72290a7e7a8064e9b3e3
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -319,9 +329,9 @@ imports:
 - name: github.com/mattbaird/jsonpatch
   version: 81af80346b1a01caae0cbc27fd3c1ba5b11e189f
 - name: github.com/mattn/go-colorable
-  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+  version: ed8eb9e318d7a84ce5915b495b7d35e0cfe7b5a8
 - name: github.com/mattn/go-isatty
-  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
+  version: 66b8e73f3f5cda9f96b69efd03dd3d7fc4a5cdb8
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -335,7 +345,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/moby/moby
-  version: 3f08ab936f0894842daf088b2ebdec0d0bb83cb3
+  version: 3cd54c28fd7281f995d134d2e0d74582a90b2f14
   subpackages:
   - pkg/term
 - name: github.com/modern-go/concurrent
@@ -343,24 +353,24 @@ imports:
 - name: github.com/modern-go/reflect2
   version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
 - name: github.com/moul/anonuuid
-  version: 0d88f18dab3a5fdfe9f924bf90df70228557a5e8
+  version: 9814ab0e7b96efb9a44990368169dcadd6fcda55
 - name: github.com/moul/gotty-client
   version: c1b82f1af3ebb2febba268415cb1c90686078f80
 - name: github.com/nats-io/go-nats
-  version: c528ff487513eec69347b5598eb35d91f0a63820
+  version: 36d30b0ba7aa260ae25b4f3d312b2a700106fd78
   subpackages:
   - encoders/builtin
   - util
 - name: github.com/nats-io/go-nats-streaming
-  version: 4366d43a0648b4997ed32080f937e8702ab86c48
+  version: 512d9079d04064a6b2788d47e9800269d6e32ba8
   subpackages:
   - pb
 - name: github.com/nats-io/nkeys
   version: 1546a3320a8f195a5b5c84aef8309377c2e411d5
 - name: github.com/nats-io/nuid
-  version: 3024a71c3cbe30667286099921591e6fcc328230
+  version: 4b96681fa6d28dd0ab5fe79bac63b3a493d9ee94
 - name: github.com/ncw/swift
-  version: 24e3012fc8a71f004a6455bce2088031d50bf2b6
+  version: 753d2090bb62619675997bd87a8e3af423a00f2d
 - name: github.com/onsi/ginkgo
   version: fa5fabab2a1bfbd924faf4c067d07ae414e2aedf
   subpackages:
@@ -401,6 +411,24 @@ imports:
   version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/pharmer/cloud
+  version: d764068dbc2c859be1e020ef5edae9d3cc86e000
+  subpackages:
+  - pkg/apis
+  - pkg/apis/cloud/v1
+  - pkg/cmds/options
+  - pkg/credential
+  - pkg/credential/cloud
+  - pkg/providers
+  - pkg/providers/aws
+  - pkg/providers/azure
+  - pkg/providers/digitalocean
+  - pkg/providers/gce
+  - pkg/providers/linode
+  - pkg/providers/packet
+  - pkg/providers/scaleway
+  - pkg/providers/vultr
+  - pkg/util
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/prometheus/client_golang
@@ -443,28 +471,40 @@ imports:
   - pkg/api
   - pkg/sshcommand
   - pkg/utils
+- name: github.com/sergi/go-diff
+  version: 97b2266dfe4bd4ea1b81a463322f04f8b724801e
+  subpackages:
+  - diffmatchpatch
 - name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/skratchdot/open-golang
-  version: a2dfa6d0dab6634ecf39251031a3d52db73b5c7e
+  version: 79abb63cd66e41cb1473e26d11ebdcd68b04c8e5
   subpackages:
   - open
 - name: github.com/softlayer/softlayer-go
-  version: a40f6fdd659fe88efd2020e932905ceb4d496db7
+  version: aa510384a41b6450fa6a50e943ed32f5e838fada
   subpackages:
   - config
   - datatypes
   - services
   - session
   - sl
+- name: github.com/soheilhy/cmux
+  version: 8a8ea3c53959009183d7914522833c1ed8835020
 - name: github.com/spf13/cobra
   version: ef82de70bb3f60c65fb8eebacbb2d122ef517385
   subpackages:
   - doc
 - name: github.com/spf13/pflag
   version: 298182f68c66c05229eb03ac171abe6e309ee79a
+- name: github.com/yudai/gojsondiff
+  version: 7b1b7adf999dab73a6eb02669c3d82dbb27a3dd6
+  subpackages:
+  - formatter
+- name: github.com/yudai/golcs
+  version: d1c525dea8ce39ea9a783d33cf08932305373f2c
 - name: go.opencensus.io
-  version: 41e54b832491efe97a2aafe696f6e7d812f136bb
+  version: df6e2001952312404b06f5f6f03fcb4aec1648e5
   subpackages:
   - internal
   - internal/tagencoding
@@ -529,7 +569,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sync
-  version: e225da77a7e68af35c70ccbf71af2b83e6acac3c
+  version: 1d60e4601c6fd243af51cc01ddf169918a5407ca
   subpackages:
   - errgroup
   - semaphore
@@ -539,7 +579,7 @@ imports:
   - unix
   - windows
 - name: golang.org/x/text
-  version: f21a4dfb5e38f5895301dc265a8def02365cc3d0
+  version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
   - cases
   - encoding
@@ -581,7 +621,7 @@ imports:
   - storage/v1
   - support/bundler
 - name: google.golang.org/appengine
-  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
+  version: 12d5545dc1cfa6047a286d5e853841b6471f4c19
   subpackages:
   - internal
   - internal/app_identity
@@ -642,7 +682,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 - name: k8s.io/api
-  version: 89a74a8d264df0e993299876a8cde88379b940ee
+  version: 5cb15d34447165a97c76ed5a60e4e99c8a01ecfe
   subpackages:
   - admission/v1beta1
   - admissionregistration/v1alpha1
@@ -679,12 +719,12 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apiextensions-apiserver
-  version: 20c909e7c8c3fec1a0e345b1d4e57f1c1623c368
+  version: 475668423e9f8feb5e3cc53f37bfeb1ce37f2ce5
   subpackages:
   - pkg/apis/apiextensions
   - pkg/apis/apiextensions/v1beta1
 - name: k8s.io/apimachinery
-  version: 32ccef23274063254360a5c9c0ec4126487e1754
+  version: a3cbe62563e67ed2cb39fe907396990fac4280a5
   repo: https://github.com/kmodules/apimachinery.git
   vcs: git
   subpackages:
@@ -740,7 +780,7 @@ imports:
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: 9caa0299108fbdf51d3d9b8e8956834ae84dac75
+  version: a4358799e4fec459cf9babfca7c5acf3eed2cef8
   subpackages:
   - pkg/admission
   - pkg/admission/configuration
@@ -848,13 +888,13 @@ imports:
   - plugin/pkg/authenticator/token/webhook
   - plugin/pkg/authorizer/webhook
 - name: k8s.io/cli-runtime
-  version: a04da5c88c0796c1dc5ff976a9c91999779ac0e4
+  version: f2b4781c3ae1e55b0657ab4fa0c8b702282d018f
   subpackages:
   - pkg/genericclioptions
   - pkg/genericclioptions/printers
   - pkg/genericclioptions/resource
 - name: k8s.io/client-go
-  version: e64494209f554a6723674bd494d69445fb76a1d4
+  version: 7621a5ebb88b1e49ce7e7837ae8e99ca030a3c13
   subpackages:
   - deprecated-dynamic
   - discovery
@@ -953,7 +993,7 @@ imports:
   - pkg/util/proto
   - pkg/util/proto/validation
 - name: k8s.io/kubernetes
-  version: ddf47ac13c1a9483ea035a79cd7c10005ff21a6d
+  version: 2166946f41b36dea2c4626f90a77706f426cdea2
   subpackages:
   - cmd/kubeadm/app/apis/kubeadm
   - cmd/kubeadm/app/apis/kubeadm/v1alpha3
@@ -987,9 +1027,10 @@ imports:
   subpackages:
   - exec
 - name: kmodules.xyz/client-go
-  version: 45c57f3f168df1fa926ebd155516cee7ff8d0731
+  version: 85881479d87957cf3eab9424ec86bcc67dbfbac6
   subpackages:
   - core/v1
+  - meta
   - tools/backup
 - name: sigs.k8s.io/cluster-api
   version: 26aa37ad8bcffd5b69e2a514b5e9a8ac30744134
@@ -1049,7 +1090,7 @@ imports:
   version: fd68e9863619f6ec2fdd8625fe1f02e7c877e480
 testImports:
 - name: code.gitea.io/sdk
-  version: a669487e86e0cc5833a2867e6476da6327244a1a
+  version: 13a7bf625b83106a184485dd50ae555980780282
   subpackages:
   - gitea
 - name: github.com/pmezard/go-difflib

@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	api "github.com/pharmer/pharmer/apis/v1alpha1"
-	"github.com/pharmer/pharmer/credential"
+	cloudapi "github.com/pharmer/cloud/pkg/apis/cloud/v1"
+	"github.com/pharmer/cloud/pkg/credential"
+	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -145,13 +146,13 @@ func (h *HumanReadablePrinter) printCluster(item *api.Cluster, w io.Writer, opti
 		return
 	}
 
-	if _, err = fmt.Fprintf(w, "%s\t", item.Spec.Cloud.CloudProvider); err != nil {
+	if _, err = fmt.Fprintf(w, "%s\t", item.Spec.Config.Cloud.CloudProvider); err != nil {
 		return
 	}
-	if _, err = fmt.Fprintf(w, "%s\t", item.Spec.Cloud.Zone); err != nil {
+	if _, err = fmt.Fprintf(w, "%s\t", item.Spec.Config.Cloud.Zone); err != nil {
 		return
 	}
-	if _, err = fmt.Fprintf(w, "%s\t", item.Spec.KubernetesVersion); err != nil {
+	if _, err = fmt.Fprintf(w, "%s\t", item.Spec.Config.KubernetesVersion); err != nil {
 		return
 	}
 	if _, err = fmt.Fprintf(w, "%s\t", TranslateTimestamp(item.CreationTimestamp)); err != nil {
@@ -207,7 +208,7 @@ func (h *HumanReadablePrinter) printMachineSet(item *clusterv1.MachineSet, w io.
 	return
 }
 
-func (h *HumanReadablePrinter) printCredential(item *api.Credential, w io.Writer, options PrintOptions) (err error) {
+func (h *HumanReadablePrinter) printCredential(item *cloudapi.Credential, w io.Writer, options PrintOptions) (err error) {
 	name := item.Name
 
 	if _, err = fmt.Fprintf(w, "%s\t", name); err != nil {
