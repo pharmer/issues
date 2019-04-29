@@ -125,7 +125,8 @@ func (ca *ClusterApi) Apply(controllerManager string) error {
 	masterMachine.Annotations[InstanceStatusAnnotationKey] = ""
 
 	Logger(ca.ctx).Infof("Adding master machines...")
-	if err := phases.ApplyMachines(ca.bootstrapClient, namespace, []*clusterv1.Machine{masterMachine}); err != nil && !api.ErrAlreadyExist(err) {
+	err = phases.ApplyMachines(ca.bootstrapClient, namespace, []*clusterv1.Machine{masterMachine})
+	if err != nil && !api.ErrAlreadyExist(err) && !api.ErrObjectModified(err) {
 		return err
 	}
 
