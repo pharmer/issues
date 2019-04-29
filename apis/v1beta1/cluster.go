@@ -135,17 +135,37 @@ type AzureSpec struct {
 
 // ref: https://github.com/kubernetes/kubernetes/blob/8b9f0ea5de2083589f3b9b289b90273556bc09c4/pkg/cloudprovider/providers/azure/azure.go#L56
 type AzureCloudConfig struct {
-	TenantID           string `json:"tenantId,omitempty" protobuf:"bytes,1,opt,name=tenantId"`
-	SubscriptionID     string `json:"subscriptionId,omitempty" protobuf:"bytes,2,opt,name=subscriptionId"`
-	AadClientID        string `json:"aadClientId,omitempty" protobuf:"bytes,3,opt,name=aadClientId"`
-	AadClientSecret    string `json:"aadClientSecret,omitempty" protobuf:"bytes,4,opt,name=aadClientSecret"`
-	ResourceGroup      string `json:"resourceGroup,omitempty" protobuf:"bytes,5,opt,name=resourceGroup"`
-	Location           string `json:"location,omitempty" protobuf:"bytes,6,opt,name=location"`
-	SubnetName         string `json:"subnetName,omitempty" protobuf:"bytes,7,opt,name=subnetName"`
-	SecurityGroupName  string `json:"securityGroupName,omitempty" protobuf:"bytes,8,opt,name=securityGroupName"`
-	VnetName           string `json:"vnetName,omitempty" protobuf:"bytes,9,opt,name=vnetName"`
-	RouteTableName     string `json:"routeTableName,omitempty" protobuf:"bytes,10,opt,name=routeTableName"`
-	StorageAccountName string `json:"storageAccountName,omitempty" protobuf:"bytes,11,opt,name=storageAccountName"`
+	Cloud                        string  `json:"cloud"`
+	TenantID                     string  `json:"tenantId,omitempty" protobuf:"bytes,1,opt,name=tenantId"`
+	SubscriptionID               string  `json:"subscriptionId,omitempty" protobuf:"bytes,2,opt,name=subscriptionId"`
+	AadClientID                  string  `json:"aadClientId,omitempty" protobuf:"bytes,3,opt,name=aadClientId"`
+	AadClientSecret              string  `json:"aadClientSecret,omitempty" protobuf:"bytes,4,opt,name=aadClientSecret"`
+	ResourceGroup                string  `json:"resourceGroup,omitempty" protobuf:"bytes,5,opt,name=resourceGroup"`
+	Location                     string  `json:"location,omitempty" protobuf:"bytes,6,opt,name=location"`
+	VMType                       string  `json:"vmType"`
+	SubnetName                   string  `json:"subnetName,omitempty" protobuf:"bytes,7,opt,name=subnetName"`
+	SecurityGroupName            string  `json:"securityGroupName,omitempty" protobuf:"bytes,8,opt,name=securityGroupName"`
+	VnetName                     string  `json:"vnetName,omitempty" protobuf:"bytes,9,opt,name=vnetName"`
+	RouteTableName               string  `json:"routeTableName,omitempty" protobuf:"bytes,10,opt,name=routeTableName"`
+	PrimaryAvailabilitySetName   string  `json:"primaryAvailabilitySetName"`
+	PrimaryScaleSetName          string  `json:"primaryScaleSetName"`
+	CloudProviderBackoff         bool    `json:"cloudProviderBackoff"`
+	CloudProviderBackoffRetries  int     `json:"cloudProviderBackoffRetries"`
+	CloudProviderBackoffExponent float32 `json:"cloudProviderBackoffExponent"`
+	CloudProviderBackoffDuration int     `json:"cloudProviderBackoffDuration"`
+	CloudProviderBackoffJitter   float32 `json:"cloudProviderBackoffJitter"`
+	CloudProviderRatelimit       bool    `json:"cloudProviderRatelimit"`
+	CloudProviderRateLimitQPS    float32 `json:"cloudProviderRateLimitQPS"`
+	CloudProviderRateLimitBucket int     `json:"cloudProviderRateLimitBucket"`
+	UseManagedIdentityExtension  bool    `json:"useManagedIdentityExtension"`
+	UserAssignedIdentityID       string  `json:"userAssignedIdentityID"`
+	UseInstanceMetadata          bool    `json:"useInstanceMetadata"`
+	LoadBalancerSku              string  `json:"loadBalancerSku"`
+	ExcludeMasterFromStandardLB  bool    `json:"excludeMasterFromStandardLB"`
+	ProviderVaultName            string  `json:"providerVaultName"`
+	MaximumLoadBalancerRuleCount int     `json:"maximumLoadBalancerRuleCount"`
+	ProviderKeyName              string  `json:"providerKeyName"`
+	ProviderKeyVersion           string  `json:"providerKeyVersion"`
 }
 
 type LinodeSpec struct {
