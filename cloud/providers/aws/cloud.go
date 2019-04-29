@@ -106,6 +106,28 @@ func PrepareCloud(cm *ClusterManager) error {
 	return nil
 }
 
+func (conn *cloudConnector) getInstanceRootDeviceSize(instance *ec2.Instance) (*int64, error) {
+	for _, bdm := range instance.BlockDeviceMappings {
+		if aws.StringValue(bdm.DeviceName) == aws.StringValue(instance.RootDeviceName) {
+			input := &ec2.DescribeVolumesInput{
+				VolumeIds: []*string{bdm.Ebs.VolumeId},
+			}
+
+			out, err := conn.ec2.DescribeVolumes(input)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(out.Volumes) == 0 {
+				return nil, errors.Errorf("no volumes found for id %q", aws.StringValue(bdm.Ebs.VolumeId))
+			}
+
+			return out.Volumes[0].Size, nil
+		}
+	}
+	return nil, nil
+}
+
 // Returns true if unauthorized
 func (conn *cloudConnector) IsUnauthorized() (bool, string) {
 	policies := make(map[string]string)
@@ -1407,7 +1429,7 @@ func (conn *cloudConnector) getMaster() (bool, error) {
 	return true, err
 }
 
-func (conn *cloudConnector) startMaster(machine *clusterv1.Machine, sku, privateSubnetID string) (*api.NodeInfo, error) {
+func (conn *cloudConnector) startMaster(machine *clusterv1.Machine, sku, privateSubnetID string) (*ec2.Instance, error) {
 	sshKeyName := conn.cluster.Spec.Config.Cloud.SSHKeyName
 
 	if err := conn.detectUbuntuImage(); err != nil {
@@ -1493,12 +1515,8 @@ func (conn *cloudConnector) startMaster(machine *clusterv1.Machine, sku, private
 	if err != nil {
 		return nil, err
 	}
-	node := api.NodeInfo{
-		Name:       *r.Reservations[0].Instances[0].PrivateDnsName,
-		ExternalID: *masterInstance.InstanceId,
-	}
 
-	return &node, nil
+	return r.Reservations[0].Instances[0], nil
 }
 
 func (conn *cloudConnector) waitForInstanceState(instanceID, state string) error {
