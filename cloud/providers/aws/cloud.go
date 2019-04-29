@@ -69,6 +69,7 @@ func NewConnector(cm *ClusterManager) (*cloudConnector, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	conn := cloudConnector{
 		ctx:       cm.ctx,
 		cluster:   cm.cluster,
@@ -106,6 +107,28 @@ func PrepareCloud(cm *ClusterManager) error {
 	}
 
 	return nil
+}
+
+func (conn *cloudConnector) getInstanceRootDeviceSize(instance *ec2.Instance) (*int64, error) {
+	for _, bdm := range instance.BlockDeviceMappings {
+		if aws.StringValue(bdm.DeviceName) == aws.StringValue(instance.RootDeviceName) {
+			input := &ec2.DescribeVolumesInput{
+				VolumeIds: []*string{bdm.Ebs.VolumeId},
+			}
+
+			out, err := conn.ec2.DescribeVolumes(input)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(out.Volumes) == 0 {
+				return nil, errors.Errorf("no volumes found for id %q", aws.StringValue(bdm.Ebs.VolumeId))
+			}
+
+			return out.Volumes[0].Size, nil
+		}
+	}
+	return nil, nil
 }
 
 // Returns true if unauthorized
@@ -1409,7 +1432,7 @@ func (conn *cloudConnector) getMaster() (bool, error) {
 	return true, err
 }
 
-func (conn *cloudConnector) startMaster(machine *clusterv1.Machine, sku, privateSubnetID string) (*api.NodeInfo, error) {
+func (conn *cloudConnector) startMaster(machine *clusterv1.Machine, sku, privateSubnetID string) (*ec2.Instance, error) {
 	sshKeyName := conn.cluster.Spec.Config.Cloud.SSHKeyName
 
 	if err := conn.detectUbuntuImage(); err != nil {
@@ -1495,12 +1518,8 @@ func (conn *cloudConnector) startMaster(machine *clusterv1.Machine, sku, private
 	if err != nil {
 		return nil, err
 	}
-	node := api.NodeInfo{
-		Name:       *r.Reservations[0].Instances[0].PrivateDnsName,
-		ExternalID: *masterInstance.InstanceId,
-	}
 
-	return &node, nil
+	return r.Reservations[0].Instances[0], nil
 }
 
 func (conn *cloudConnector) waitForInstanceState(instanceID, state string) error {
@@ -1602,6 +1621,12 @@ func (conn *cloudConnector) releaseReservedIP() error {
 
 func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 	log.Infof("deleting security group")
+
+	if vpcID == "" {
+		log.Infof("vpc-id is empty, vpc already deleted")
+		return nil
+	}
+
 	return wait.PollImmediate(RetryInterval, RetryTimeout, func() (done bool, err error) {
 		r, err := conn.ec2.DescribeSecurityGroups(&_ec2.DescribeSecurityGroupsInput{
 			Filters: []*_ec2.Filter{
@@ -1620,6 +1645,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 			},
 		})
 		if err != nil {
+			log.Infof("failed to list securit groups: %v", err)
 			return false, nil
 		}
 
@@ -1630,7 +1656,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 					IpPermissions: sg.IpPermissions,
 				})
 				if err != nil {
-					log.Infof(err.Error())
+					log.Infof("failed to delete security group IpPermissions: %v", err)
 					return false, nil
 				}
 			}
@@ -1641,7 +1667,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 					IpPermissions: sg.IpPermissionsEgress,
 				})
 				if err != nil {
-					log.Infof(err.Error())
+					log.Infof("failed to delete security group IpPermissionsEgress: %v", err)
 					return false, nil
 				}
 			}
@@ -1652,7 +1678,7 @@ func (conn *cloudConnector) deleteSecurityGroup(vpcID string) error {
 				GroupId: sg.GroupId,
 			})
 			if err != nil {
-				log.Infof(err.Error())
+				log.Infof("failed to delete security group %s: %v", sg.GroupName, err)
 				return false, nil
 			}
 		}
@@ -1777,6 +1803,10 @@ func (conn *cloudConnector) deleteRouteTable(vpcID string) error {
 }
 
 func (conn *cloudConnector) deleteNatGateway(natID string) error {
+	if natID == "" {
+		log.Infof("NAT already deleted, exiting")
+		return nil
+	}
 	if _, err := conn.ec2.DeleteNatGateway(&ec2.DeleteNatGatewayInput{
 		NatGatewayId: StringP(natID),
 	}); err != nil {
