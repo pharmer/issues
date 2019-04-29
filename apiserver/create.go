@@ -29,7 +29,6 @@ func (a *Apiserver) CreateCluster() error {
 			return
 		}
 
-
 		obj, err := Store(a.ctx).Operations().Get(operation.OperationId)
 		if err != nil {
 			glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
@@ -52,7 +51,6 @@ func (a *Apiserver) CreateCluster() error {
 			noti := notification.NewNotifier(a.ctx, a.natsConn, strconv.Itoa(int(obj.ClusterID)))
 			newCtx := WithLogger(a.ctx, noti)
 
-
 			cluster, err = Create(newCtx, cluster, strconv.Itoa(int(obj.UserID)))
 			if err != nil {
 				glog.Errorf("seq = %d [redelivered = %v, data = %v, err = %v]\n", msg.Sequence, msg.Redelivered, msg.Data, err)
@@ -64,14 +62,11 @@ func (a *Apiserver) CreateCluster() error {
 				DryRun:      false,
 			}, obj)
 
-
 			if err := msg.Ack(); err != nil {
 				glog.Errorf("failed to ACK msg: %d", msg.Sequence)
 			}
 
 		}
-
-
 
 	}, stan.SetManualAckMode(), stan.DurableName("i-remember"))
 

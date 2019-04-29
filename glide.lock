@@ -1,14 +1,14 @@
-hash: dc0cd3364702a47c3924800518a314c0de1ac322f6236bf1192353f1317b89d0
-updated: 2019-03-29T17:53:55.464356693+06:00
+hash: 8c6af3fd9465635cd4c229212473c2d99c2b9354e2e1f13191ead6f7f031cbdf
+updated: 2019-04-23T18:09:11.309830973+06:00
 imports:
 - name: cloud.google.com/go
   version: 0fd7230b2a7505833d5f69b75cbd6c9582401479
   subpackages:
   - compute/metadata
 - name: contrib.go.opencensus.io/exporter/ocagent
-  version: 25f67030b05d75c23acfd7f7e7f5b604b820fbef
+  version: 44fbaec75354d0135f5db348b97a811ee0120dce
 - name: github.com/appscode/go
-  version: 52eaa8008e2e5fe8df77ac6fb2fd45e3ea2ae47c
+  version: 50c98d5fbcddac827713a481a7e34a26df5e4b57
   subpackages:
   - analytics
   - context
@@ -35,7 +35,7 @@ imports:
 - name: github.com/appscode/go-version
   version: 7aba545c679b0f45679eeb406dc662d2c8a04c26
 - name: github.com/aws/aws-sdk-go
-  version: fde4ded7becdeae4d26bf1212916aabba79349b4
+  version: b4d97e9cf75f3815bd694b8e0d6f9d81492c3586
   subpackages:
   - aws
   - aws/awserr
@@ -46,6 +46,7 @@ imports:
   - aws/credentials
   - aws/credentials/ec2rolecreds
   - aws/credentials/endpointcreds
+  - aws/credentials/processcreds
   - aws/credentials/stscreds
   - aws/csm
   - aws/defaults
@@ -54,8 +55,11 @@ imports:
   - aws/request
   - aws/session
   - aws/signer/v4
+  - internal/ini
+  - internal/s3err
   - internal/sdkio
   - internal/sdkrand
+  - internal/sdkuri
   - internal/shareddefaults
   - private/protocol
   - private/protocol/ec2query
@@ -190,7 +194,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: 5899d5c5e619fda5fa86e14795a835f473ca284c
 - name: github.com/go-xorm/builder
-  version: 1d658d7596c25394aab557ef5b50ef35bf706384
+  version: 0c156dfdb0619fec336cc5b87b15b06f858ce6c7
 - name: github.com/go-xorm/core
   version: c10e21e7e1cec20e09398f2dfae385e58c8df555
 - name: github.com/go-xorm/xorm
@@ -335,7 +339,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/moby/moby
-  version: 3f08ab936f0894842daf088b2ebdec0d0bb83cb3
+  version: 0320a312d277a2b21c54bc97a41687925ea4fec3
   subpackages:
   - pkg/term
 - name: github.com/modern-go/concurrent
@@ -343,11 +347,11 @@ imports:
 - name: github.com/modern-go/reflect2
   version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
 - name: github.com/moul/anonuuid
-  version: 0d88f18dab3a5fdfe9f924bf90df70228557a5e8
+  version: 9814ab0e7b96efb9a44990368169dcadd6fcda55
 - name: github.com/moul/gotty-client
   version: c1b82f1af3ebb2febba268415cb1c90686078f80
 - name: github.com/nats-io/go-nats
-  version: c528ff487513eec69347b5598eb35d91f0a63820
+  version: 36d30b0ba7aa260ae25b4f3d312b2a700106fd78
   subpackages:
   - encoders/builtin
   - util
@@ -358,9 +362,9 @@ imports:
 - name: github.com/nats-io/nkeys
   version: 1546a3320a8f195a5b5c84aef8309377c2e411d5
 - name: github.com/nats-io/nuid
-  version: 3024a71c3cbe30667286099921591e6fcc328230
+  version: 4b96681fa6d28dd0ab5fe79bac63b3a493d9ee94
 - name: github.com/ncw/swift
-  version: 24e3012fc8a71f004a6455bce2088031d50bf2b6
+  version: 753d2090bb62619675997bd87a8e3af423a00f2d
 - name: github.com/onsi/ginkgo
   version: fa5fabab2a1bfbd924faf4c067d07ae414e2aedf
   subpackages:
@@ -446,11 +450,11 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/skratchdot/open-golang
-  version: a2dfa6d0dab6634ecf39251031a3d52db73b5c7e
+  version: 79abb63cd66e41cb1473e26d11ebdcd68b04c8e5
   subpackages:
   - open
 - name: github.com/softlayer/softlayer-go
-  version: a40f6fdd659fe88efd2020e932905ceb4d496db7
+  version: aa510384a41b6450fa6a50e943ed32f5e838fada
   subpackages:
   - config
   - datatypes
@@ -464,7 +468,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 298182f68c66c05229eb03ac171abe6e309ee79a
 - name: go.opencensus.io
-  version: 41e54b832491efe97a2aafe696f6e7d812f136bb
+  version: 75c0cca22312e51bfd4fafdbe9197ae399e18b38
   subpackages:
   - internal
   - internal/tagencoding
@@ -529,7 +533,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sync
-  version: e225da77a7e68af35c70ccbf71af2b83e6acac3c
+  version: 112230192c580c3556b8cee6403af37a4fc5f28c
   subpackages:
   - errgroup
   - semaphore
@@ -987,7 +991,7 @@ imports:
   subpackages:
   - exec
 - name: kmodules.xyz/client-go
-  version: 45c57f3f168df1fa926ebd155516cee7ff8d0731
+  version: 5dcc4cecf4c96d58e0624cd41311f3a4663db7d7
   subpackages:
   - core/v1
   - tools/backup
@@ -1049,7 +1053,7 @@ imports:
   version: fd68e9863619f6ec2fdd8625fe1f02e7c877e480
 testImports:
 - name: code.gitea.io/sdk
-  version: a669487e86e0cc5833a2867e6476da6327244a1a
+  version: 2858b80da5f75fa2eea3fcf3205a5e6fd16da0ec
   subpackages:
   - gitea
 - name: github.com/pmezard/go-difflib

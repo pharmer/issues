@@ -13,7 +13,7 @@ import (
 	"strconv"
 )
 
-func (a *Apiserver) DeleteCluster() error  {
+func (a *Apiserver) DeleteCluster() error {
 	_, err := a.natsConn.QueueSubscribe("delete-cluster", "cluster-api-delete-workers", func(msg *stan.Msg) {
 		fmt.Printf("seq = %d [redelivered = %v, acked = false]\n", msg.Sequence, msg.Redelivered)
 
@@ -34,7 +34,6 @@ func (a *Apiserver) DeleteCluster() error  {
 		}
 
 		clusterID := strconv.Itoa(int(obj.ClusterID))
-
 
 		if obj.State == api.OperationPending {
 			obj.State = api.OperationRunning
@@ -62,15 +61,13 @@ func (a *Apiserver) DeleteCluster() error  {
 				DryRun:      false,
 			}, obj)
 
-
 			if err := msg.Ack(); err != nil {
 				glog.Errorf("failed to ACK msg: %d", msg.Sequence)
 			}
 
-
 		}
 
-		}, stan.SetManualAckMode(), stan.DurableName("i-remember"))
+	}, stan.SetManualAckMode(), stan.DurableName("i-remember"))
 
 	return err
 }
