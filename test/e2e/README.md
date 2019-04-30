@@ -30,11 +30,6 @@ PACKET_API_KEY
 ## Run the command for each provider
 
 ```bash
-$ go test --current-version=<version> \
-			--desired-version=<version> \ 
-			--provider=<provider-name> \ 
-			--zone=<zone> \
-			--nodes=<node-type> \
-			-timeout <timeout-for-each-test> 
+$ ginkgo -r --v --progress --trace test/e2e/ -- --providers aws --skip-delete true
 ```
 

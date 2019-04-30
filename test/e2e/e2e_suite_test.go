@@ -1,12 +1,14 @@
 package e2e
 
 import (
-	"flag"
+	"strings"
 	"testing"
+
+	. "github.com/pharmer/pharmer/test/e2e/util"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/pharmer/pharmer/test/e2e/util"
+	"github.com/onsi/gomega/gexec"
 )
 
 func TestE2e(t *testing.T) {
@@ -14,61 +16,85 @@ func TestE2e(t *testing.T) {
 	RunSpecs(t, "E2e Suite")
 }
 
-var kv1 = flag.String("current-version", "v12.0.5", "Lowest Kubernetes version")
-var kv2 = flag.String("desired-version", "v13.0.4", "Highest Kubernetes version")
-var provider = flag.String("provider", "", "Provider name")
-var zone = flag.String("zone", "", "Zones name")
-var nodes = flag.String("nodes", "", "Node type")
-var file = flag.String("from-file", "", "File path for GoogleCloud credential")
-var masters = flag.String("masters", "1", "No of masters")
-var dev = flag.Bool("debug", false, "Dev")
-var cluster string
-
-var (
-	KUBERNETES_VERSION string
-	err                error
-)
-
-var providers = make(map[string]string, 10)
-
-func init() {
-	providers = map[string]string{
-		"linode":       "Linode",
-		"aks":          "Azure",
-		"azure":        "Azure",
-		"aws":          "AWS",
-		"eks":          "AWS",
-		"digitalocean": "DigitalOcean",
-		"gce":          "GoogleCloud",
-		"gke":          "GoogleCloud",
-		"packet":       "Packet",
-		"vultr":        "Vultr",
-	}
-}
-
-var createCredential = func() {
-	By("Creating " + *provider + " Credential")
-	err = RunScript("/create_credential.sh", providers[*provider], *provider, *file)
-	Expect(err).NotTo(HaveOccurred())
-}
-
-var deleteCredential = func() {
-	By("Deleting " + *provider + " Credential")
-	err = RunScript("/delete_credential.sh", providers[*provider], *provider)
-	Expect(err).NotTo(HaveOccurred())
-}
-
-var installDeps = func() {
-	By("Installing Dependencies")
-	err = RunScript("deps.sh")
-	Expect(err).NotTo(HaveOccurred())
-}
-
 var _ = BeforeSuite(func() {
-	installDeps()
-	createCredential()
+	BuildPharmer()
 })
 
 var _ = AfterSuite(func() {
-	deleteCredential()
+	DeleteCredential()
+	gexec.CleanupBuildArtifacts()
 })
+
+var _ = Describe("E2E Tests", func() {
+	for _, provider := range strings.Split(Providers, ",") {
+		Describe("full e2e tests for provider "+provider, func() {
+			Context("for kubernetes version"+CurrentVersion, func() {
+				fullE2ETest(provider, CurrentVersion)
+			})
+			Context("for kubernetes version"+UpdateToVersion, func() {
+				fullE2ETest(provider, UpdateToVersion)
+			})
+		})
+	}
+})
+
+var fullE2ETest = func(provider, version string) {
+	// skip it if using --cluster-name flag
+	It("should setup cluster-name and create credentials", func() {
+		SetClusterName()
+		CreateCredential()
+	})
+
+	It("should create a cluster", func() {
+		CreateCluster(provider, version)
+	})
+
+	It("should apply the cluster", func() {
+		ApplyCluster()
+	})
+
+	It("should get kubeconfig for the cluster", func() {
+		UseCluster()
+	})
+
+	Context("wait for nodes to be ready", func() {
+		It("should wait for masters to be ready", func() {
+			WaitForNodeReady("master", Masters)
+		})
+
+		It("should wait for nodes to be ready", func() {
+			WaitForNodeReady("node", 1)
+		})
+	})
+
+	Context("scale the cluster", func() {
+		It("it should scale the cluster to two nodes", func() {
+			ScaleCluster(2)
+		})
+
+		It("should wait for two nodes to be ready", func() {
+			WaitForNodeReady("node", 2)
+		})
+	})
+
+	//It("upgrades cluster", func() {
+	//	UpgradeCluster()
+	//})
+	//
+	//It("applies the changes", func() {
+	//	ApplyCluster()
+	//})
+	//
+	//It("waits for clusters to be updated", func() {
+	//	WaitForUpdates()
+	//})
+
+	if !SkipDeleteCluster {
+		It("should delete cluster", func() {
+			DeleteCluster()
+			ApplyCluster()
+		})
+	}
+
+	ClusterName = ""
+}
