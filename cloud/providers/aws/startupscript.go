@@ -116,11 +116,15 @@ var (
 NODE_NAME=$(curl http://169.254.169.254/2007-01-19/meta-data/local-hostname)
 {{ end }}
 
+`
+)
+
+//TODO(tahsin): How to mount master external disk
+/*
 {{ define "mount-master-pd" }}
 pre-k mount-master-pd --provider=aws
 {{ end }}
-`
-)
+*/
 
 func (conn *cloudConnector) renderStartupScript(machine *clusterv1.Machine, token string) (string, error) {
 	tpl, err := StartupScriptTemplate.Clone()
