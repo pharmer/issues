@@ -7,6 +7,7 @@ import (
 	semver "github.com/appscode/go-version"
 	. "github.com/appscode/go/context"
 	"github.com/appscode/go/log"
+	"github.com/appscode/go/wait"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	clusterapiGCE "github.com/pharmer/pharmer/apis/v1beta1/gce"
 	. "github.com/pharmer/pharmer/cloud"
@@ -24,7 +25,7 @@ func (cm *ClusterManager) Apply(in *api.Cluster, dryRun bool) ([]api.Action, err
 	var acts []api.Action
 
 	if in.Status.Phase == "" {
-		return nil, errors.Errorf("cluster `%s` is in unknown phase", cm.cluster.Name)
+		return nil, errors.Errorf("cluster `%s` is in unknown phase", in.Name)
 	}
 	if in.Status.Phase == api.ClusterDeleted {
 		return nil, nil
@@ -430,7 +431,17 @@ func (cm *ClusterManager) applyScale(dryRun bool) (acts []api.Action, err error)
 		return nil, err
 	}
 
-	return
+	// wait for machines to be deleted
+	return acts, wait.PollImmediate(RetryInterval, RetryTimeout, func() (done bool, err error) {
+		machineList, err := bc.GetMachines(corev1.NamespaceAll)
+		for _, machine := range machineList {
+			if machine.DeletionTimestamp != nil {
+				log.Infof("machine %s is not deleted yet", machine.Name)
+				return false, nil
+			}
+		}
+		return true, nil
+	})
 }
 
 func (cm *ClusterManager) applyDelete(dryRun bool) (acts []api.Action, err error) {
