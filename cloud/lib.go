@@ -6,18 +6,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/appscode/go/log"
 	. "github.com/appscode/go/types"
 	"github.com/pharmer/pharmer/apis/v1beta1"
 	api "github.com/pharmer/pharmer/apis/v1beta1"
 	"github.com/pharmer/pharmer/cloud/cmds/options"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/cert"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/clusterdeployer/clusterclient"
 	clusterapi "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
+	"sigs.k8s.io/cluster-api/pkg/util"
 )
 
 var managedProviders = sets.NewString("aks", "gke", "eks", "dokube")
@@ -418,3 +422,46 @@ func GetLeaderMachine(ctx context.Context, cluster *v1beta1.Cluster, owner strin
 		HostIP: hostip,
 	}
 }*/
+
+// DeleteAllWorkerMachines waits for all nodes to be deleted
+func DeleteAllWorkerMachines(ctx context.Context, cluster *v1beta1.Cluster, owner string) error {
+	client, err := GetBooststrapClient(ctx, cluster, owner)
+	if err != nil {
+		return errors.Wrap(err, "failed to get clusterapi client")
+	}
+
+	// delete machinedeployments
+	err = client.DeleteMachineDeployments(corev1.NamespaceAll)
+	if err != nil {
+		log.Infof("failed to delete machinedeployments")
+	}
+
+	// delete machinesets
+	err = client.DeleteMachineSets(corev1.NamespaceAll)
+	if err != nil {
+		log.Infof("failed to delete machinesets")
+	}
+
+	// delete non-controlplane machines
+	machineList, err := client.GetMachines(corev1.NamespaceAll)
+	for _, machine := range machineList {
+		if !util.IsControlPlaneMachine(machine) && machine.DeletionTimestamp == nil {
+			err = client.ForceDeleteMachine(machine.Namespace, machine.Name)
+			if err != nil {
+				log.Infof("failed to delete machine %s in namespace %s", machine.Namespace, machine.Name)
+			}
+		}
+	}
+
+	// wait for all non-controlplane machines to be deleted
+	return wait.PollImmediate(RetryInterval, RetryTimeout, func() (done bool, err error) {
+		machineList, err := client.GetMachines(corev1.NamespaceAll)
+		for _, machine := range machineList {
+			if !util.IsControlPlaneMachine(machine) {
+				log.Infof("machine %s in namespace %s is not deleted yet", machine.Name, machine.Namespace)
+			}
+		}
+
+		return true, nil
+	})
+}

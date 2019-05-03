@@ -697,6 +697,11 @@ func (cm *ClusterManager) applyDelete(dryRun bool) ([]api.Action, error) {
 		return nil, err
 	}
 
+	err := DeleteAllWorkerMachines(cm.ctx, cm.cluster, cm.owner)
+	if err != nil {
+		log.Infof("failed to delete nodes: %v", err)
+	}
+
 	acts = append(acts, api.Action{
 		Action:   api.ActionDelete,
 		Resource: "MasterInstance",
