@@ -317,22 +317,22 @@ func (cm *ClusterManager) applyCreate(dryRun bool) ([]api.Action, error) {
 		Port: api.DefaultKubernetesBindPort,
 	}
 
-	var masterMachine *clusterapi.Machine
-	masterMachine, err = GetLeaderMachine(cm.ctx, cm.cluster, cm.owner)
+	var leaderMachine *clusterapi.Machine
+	leaderMachine, err = GetLeaderMachine(cm.ctx, cm.cluster, cm.owner)
 	if err != nil {
 		return acts, err
 	}
 
 	// Master Stuff
 	var masterNIC network.Interface
-	if masterNIC, err = cm.conn.getNetworkInterface(cm.namer.NetworkInterfaceName(masterMachine.Name)); err != nil {
+	if masterNIC, err = cm.conn.getNetworkInterface(cm.namer.NetworkInterfaceName(leaderMachine.Name)); err != nil {
 		acts = append(acts, api.Action{
 			Action:   api.ActionAdd,
 			Resource: "Master network interface",
-			Message:  fmt.Sprintf("Masater network interface %v will be created", cm.namer.NetworkInterfaceName(masterMachine.Name)),
+			Message:  fmt.Sprintf("Masater network interface %v will be created", cm.namer.NetworkInterfaceName(leaderMachine.Name)),
 		})
 		if !dryRun {
-			if masterNIC, err = cm.conn.createNetworkInterface(cm.namer.NetworkInterfaceName(masterMachine.Name), &controlPlaneSN, &publicLB, &internalLB); err != nil {
+			if masterNIC, err = cm.conn.createNetworkInterface(cm.namer.NetworkInterfaceName(leaderMachine.Name), &controlPlaneSN, &publicLB, &internalLB); err != nil {
 				return acts, err
 			}
 		}
@@ -340,24 +340,24 @@ func (cm *ClusterManager) applyCreate(dryRun bool) ([]api.Action, error) {
 		acts = append(acts, api.Action{
 			Action:   api.ActionNOP,
 			Resource: "Master network interface",
-			Message:  fmt.Sprintf("Masater network interface %v found", cm.namer.NetworkInterfaceName(masterMachine.Name)),
+			Message:  fmt.Sprintf("Masater network interface %v found", cm.namer.NetworkInterfaceName(leaderMachine.Name)),
 		})
 	}
 
 	//var masterVM compute.VirtualMachine
-	if _, err := cm.conn.getVirtualMachine(masterMachine.Name); err != nil {
+	if _, err := cm.conn.getVirtualMachine(leaderMachine.Name); err != nil {
 		acts = append(acts, api.Action{
 			Action:   api.ActionAdd,
 			Resource: "Master virtual machine",
-			Message:  fmt.Sprintf("Virtual machine %v will be created", masterMachine.Name),
+			Message:  fmt.Sprintf("Virtual machine %v will be created", leaderMachine.Name),
 		})
 		if !dryRun {
-			script, err := cm.conn.renderStartupScript(cm.cluster, masterMachine, cm.owner, "")
+			script, err := cm.conn.renderStartupScript(cm.cluster, leaderMachine, cm.owner, "")
 			if err != nil {
 				return acts, err
 			}
 
-			vm, err := cm.conn.createVirtualMachine(masterNIC, masterMachine.Name, script, masterMachine)
+			vm, err := cm.conn.createVirtualMachine(masterNIC, leaderMachine.Name, script, leaderMachine)
 			if err != nil {
 				return acts, err
 			}
@@ -386,10 +386,10 @@ func (cm *ClusterManager) applyCreate(dryRun bool) ([]api.Action, error) {
 			if err != nil {
 				return nil, err
 			}
-			masterMachine.Status.ProviderStatus = rawStatus
+			leaderMachine.Status.ProviderStatus = rawStatus
 
 			// update in pharmer file
-			masterMachine, err = Store(cm.ctx).Owner(cm.owner).Machine(cm.cluster.Name).Update(masterMachine)
+			leaderMachine, err = Store(cm.ctx).Owner(cm.owner).Machine(cm.cluster.Name).Update(leaderMachine)
 			if err != nil {
 				return nil, errors.Wrap(err, "error updating master machine in pharmer storage")
 			}
@@ -398,7 +398,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) ([]api.Action, error) {
 		acts = append(acts, api.Action{
 			Action:   api.ActionNOP,
 			Resource: "Master Instance",
-			Message:  fmt.Sprintf("Found master instance with name %v", masterMachine.Name),
+			Message:  fmt.Sprintf("Found master instance with name %v", leaderMachine.Name),
 		})
 	}
 
@@ -459,7 +459,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) ([]api.Action, error) {
 	}
 
 	for _, m := range machines {
-		if m.Name == masterMachine.Name {
+		if m.Name == leaderMachine.Name {
 			continue
 		}
 		if _, err := client.ClusterV1alpha1().Machines(cm.cluster.Spec.ClusterAPI.Namespace).Create(m); err != nil && !api.ErrAlreadyExist(err) {

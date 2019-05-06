@@ -164,8 +164,8 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		err = errors.Wrap(err, ID(cm.ctx))
 		return
 	}
-	var masterMachine *clusterv1.Machine
-	masterMachine, err = GetLeaderMachine(cm.ctx, cm.cluster, cm.owner)
+	var leaderMachine *clusterv1.Machine
+	leaderMachine, err = GetLeaderMachine(cm.ctx, cm.cluster, cm.owner)
 	if err != nil {
 		return
 	}
@@ -178,7 +178,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 			Message:  "Load Balancer not found",
 		})
 		if !dryRun {
-			if loadBalancerIP, err = cm.conn.createLoadBalancer(masterMachine.Name); err != nil {
+			if loadBalancerIP, err = cm.conn.createLoadBalancer(leaderMachine.Name); err != nil {
 				return acts, errors.Wrap(err, "Error creating load balancer")
 			}
 		}
@@ -208,7 +208,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		return nil, err
 	}
 
-	providerSpec, err := clusterapiGCE.MachineConfigFromProviderSpec(masterMachine.Spec.ProviderSpec)
+	providerSpec, err := clusterapiGCE.MachineConfigFromProviderSpec(leaderMachine.Spec.ProviderSpec)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode machine provider spec")
 	}
@@ -260,13 +260,13 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 
 	Logger(cm.ctx).Info("Preparing Master Instance")
 
-	found, _ = cm.conn.getMasterInstance(masterMachine)
+	found, _ = cm.conn.getMasterInstance(leaderMachine)
 
 	if !found {
 		acts = append(acts, api.Action{
 			Action:   api.ActionAdd,
 			Resource: "Master Instance",
-			Message:  fmt.Sprintf("Master instance with name %v will be created", masterMachine.Name),
+			Message:  fmt.Sprintf("Master instance with name %v will be created", leaderMachine.Name),
 		})
 		if !dryRun {
 			var op1 string
@@ -318,7 +318,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		return acts, err
 	}
 
-	masterMachine, err = Store(cm.ctx).Owner(cm.owner).Machine(cm.cluster.Name).UpdateStatus(masterMachine)
+	leaderMachine, err = Store(cm.ctx).Owner(cm.owner).Machine(cm.cluster.Name).UpdateStatus(leaderMachine)
 	if err != nil {
 		return
 	}
@@ -349,7 +349,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 	}
 
 	for _, m := range machines {
-		if m.Name == masterMachine.Name {
+		if m.Name == leaderMachine.Name {
 			continue
 		}
 		if _, err := client.ClusterV1alpha1().Machines(cm.cluster.Spec.ClusterAPI.Namespace).Create(m); err != nil {
