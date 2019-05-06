@@ -266,7 +266,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		acts = append(acts, api.Action{
 			Action:   api.ActionAdd,
 			Resource: "Master Instance",
-			Message:  fmt.Sprintf("Master instance with name %v will be created", cm.conn.namer.MasterName()),
+			Message:  fmt.Sprintf("Master instance with name %v will be created", masterMachine.Name),
 		})
 		if !dryRun {
 			var op1 string

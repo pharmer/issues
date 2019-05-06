@@ -317,16 +317,22 @@ func (cm *ClusterManager) applyCreate(dryRun bool) ([]api.Action, error) {
 		Port: api.DefaultKubernetesBindPort,
 	}
 
+	var masterMachine *clusterapi.Machine
+	masterMachine, err = GetLeaderMachine(cm.ctx, cm.cluster, cm.owner)
+	if err != nil {
+		return acts, err
+	}
+
 	// Master Stuff
 	var masterNIC network.Interface
-	if masterNIC, err = cm.conn.getNetworkInterface(cm.namer.NetworkInterfaceName(cm.namer.MasterName())); err != nil {
+	if masterNIC, err = cm.conn.getNetworkInterface(cm.namer.NetworkInterfaceName(masterMachine.Name)); err != nil {
 		acts = append(acts, api.Action{
 			Action:   api.ActionAdd,
 			Resource: "Master network interface",
-			Message:  fmt.Sprintf("Masater network interface %v will be created", cm.namer.NetworkInterfaceName(cm.namer.MasterName())),
+			Message:  fmt.Sprintf("Masater network interface %v will be created", cm.namer.NetworkInterfaceName(masterMachine.Name)),
 		})
 		if !dryRun {
-			if masterNIC, err = cm.conn.createNetworkInterface(cm.namer.NetworkInterfaceName(cm.namer.MasterName()), &controlPlaneSN, &publicLB, &internalLB); err != nil {
+			if masterNIC, err = cm.conn.createNetworkInterface(cm.namer.NetworkInterfaceName(masterMachine.Name), &controlPlaneSN, &publicLB, &internalLB); err != nil {
 				return acts, err
 			}
 		}
@@ -334,22 +340,16 @@ func (cm *ClusterManager) applyCreate(dryRun bool) ([]api.Action, error) {
 		acts = append(acts, api.Action{
 			Action:   api.ActionNOP,
 			Resource: "Master network interface",
-			Message:  fmt.Sprintf("Masater network interface %v found", cm.namer.NetworkInterfaceName(cm.namer.MasterName())),
+			Message:  fmt.Sprintf("Masater network interface %v found", cm.namer.NetworkInterfaceName(masterMachine.Name)),
 		})
 	}
 
-	var masterMachine *clusterapi.Machine
-	masterMachine, err = GetLeaderMachine(cm.ctx, cm.cluster, cm.owner)
-	if err != nil {
-		return acts, err
-	}
-
 	//var masterVM compute.VirtualMachine
-	if _, err := cm.conn.getVirtualMachine(cm.namer.MasterName()); err != nil {
+	if _, err := cm.conn.getVirtualMachine(masterMachine.Name); err != nil {
 		acts = append(acts, api.Action{
 			Action:   api.ActionAdd,
 			Resource: "Master virtual machine",
-			Message:  fmt.Sprintf("Virtual machine %v will be created", cm.namer.MasterName()),
+			Message:  fmt.Sprintf("Virtual machine %v will be created", masterMachine.Name),
 		})
 		if !dryRun {
 			script, err := cm.conn.renderStartupScript(cm.cluster, masterMachine, cm.owner, "")
@@ -398,7 +398,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) ([]api.Action, error) {
 		acts = append(acts, api.Action{
 			Action:   api.ActionNOP,
 			Resource: "Master Instance",
-			Message:  fmt.Sprintf("Found master instance with name %v", cm.namer.MasterName()),
+			Message:  fmt.Sprintf("Found master instance with name %v", masterMachine.Name),
 		})
 	}
 

@@ -501,7 +501,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		}
 	}
 
-	if found, err = cm.conn.getMaster(); err != nil {
+	if found, err = cm.conn.getMaster(masterMachine.Name); err != nil {
 		Logger(cm.ctx).Infoln(err)
 	}
 	if !found {
@@ -509,7 +509,7 @@ func (cm *ClusterManager) applyCreate(dryRun bool) (acts []api.Action, err error
 		acts = append(acts, api.Action{
 			Action:   api.ActionAdd,
 			Resource: "MasterInstance",
-			Message:  fmt.Sprintf("Master instance %s will be created", cm.namer.MasterName()),
+			Message:  fmt.Sprintf("Master instance %s will be created", masterMachine.Name),
 		})
 		if !dryRun {
 
