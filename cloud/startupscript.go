@@ -331,7 +331,7 @@ kubeadm join --config=/etc/kubernetes/kubeadm/join.yaml
 {{ end }}
 
 {{ if .UseKubeProxy1_11_0 }}
-kubectl apply -f https://raw.githubusercontent.com/pharmer/addons/release-1.11/kube-proxy/v1.11.0/kube-proxy.yaml \
+kubectl apply -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/kube-proxy/v1.11.0/kube-proxy.yaml \
   --kubeconfig /etc/kubernetes/admin.conf
 {{ end }}
 
@@ -344,7 +344,7 @@ kubectl apply -f https://raw.githubusercontent.com/pharmer/addons/release-1.11/k
 {{ end }}
 
 kubectl apply \
-  -f https://raw.githubusercontent.com/pharmer/addons/release-1.11/kubeadm-probe/installer.yaml \
+  -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/kubeadm-probe/installer.yaml \
   --kubeconfig /etc/kubernetes/admin.conf
 
 mkdir -p ~/.kube
@@ -489,11 +489,11 @@ chmod 600 /etc/kubernetes/pki/etcd/ca.key
 
 	_ = template.Must(StartupScriptTemplate.New("ccm").Parse(`
 # Deploy CCM RBAC
-cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/master/cloud-controller-manager/rbac.yaml'
+cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/cloud-controller-manager/rbac.yaml'
 exec_until_success "$cmd"
 
 # Deploy CCM DaemonSet
-cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/master/cloud-controller-manager/{{ .Provider }}/installer.yaml'
+cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/cloud-controller-manager/{{ .Provider }}/installer.yaml'
 exec_until_success "$cmd"
 
 until [ $(kubectl get pods -n kube-system -l k8s-app=kube-dns -o jsonpath='{.items[0].status.phase}' --kubeconfig /etc/kubernetes/admin.conf) == "Running" ]
@@ -530,7 +530,7 @@ pre-k merge config \
 	_ = template.Must(StartupScriptTemplate.New("calico").Parse(`
 {{ if .IsVersionLessThan1_11 }}
 kubectl apply \
-  -f https://raw.githubusercontent.com/pharmer/addons/master/calico/2.6/calico.yaml \
+  -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/calico/2.6/calico.yaml \
   --kubeconfig /etc/kubernetes/admin.conf
 {{ else }}
 kubectl apply \
@@ -553,7 +553,7 @@ kubectl apply \
 
 	_ = template.Must(StartupScriptTemplate.New("flannel").Parse(`
 kubectl apply \
-  -f https://raw.githubusercontent.com/pharmer/addons/release-1.11/flannel/v0.9.1/kube-vxlan.yml \
+  -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/flannel/v0.9.1/kube-vxlan.yml \
   --kubeconfig /etc/kubernetes/admin.conf
 `))
 )
