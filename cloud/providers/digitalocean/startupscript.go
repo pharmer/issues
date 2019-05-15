@@ -149,11 +149,9 @@ exec_until_success "$cmd"
 cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/cloud-storage/{{ .Provider }}/provisioner.yaml'
 exec_until_success "$cmd"
 
-{{ if not .IsVersionLessThan1_11}}
 #Deploy initializer
 cmd='kubectl apply --kubeconfig /etc/kubernetes/admin.conf -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/cloud-controller-manager/initializer.yaml'
 exec_until_success "$cmd"
-{{ end }}
 {{ end }}
 
 

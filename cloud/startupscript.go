@@ -1,9 +1,7 @@
 package cloud
 
 import (
-	"bytes"
 	"fmt"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -66,15 +64,7 @@ func (td TemplateData) InitConfigurationYAML() (string, error) {
 	if td.InitConfiguration == nil {
 		return "", nil
 	}
-	var cb []byte
-	var err error
-
-	if td.IsVersionLessThan1_13() {
-		conf := ConvertInitConfigFromV1bet1ToV1alpha3(td.InitConfiguration)
-		cb, err = yaml.Marshal(conf)
-	} else {
-		cb, err = yaml.Marshal(td.InitConfiguration)
-	}
+	cb, err := yaml.Marshal(td.InitConfiguration)
 
 	return string(cb), err
 }
@@ -83,14 +73,7 @@ func (td TemplateData) ClusterConfigurationYAML() (string, error) {
 	if td.ClusterConfiguration == nil {
 		return "", nil
 	}
-	var cb []byte
-	var err error
-	if td.IsVersionLessThan1_13() {
-		conf := ConvertClusterConfigFromV1beta1ToV1alpha3(td.ClusterConfiguration)
-		cb, err = yaml.Marshal(conf)
-	} else {
-		cb, err = yaml.Marshal(td.ClusterConfiguration)
-	}
+	cb, err := yaml.Marshal(td.ClusterConfiguration)
 	return string(cb), err
 }
 
@@ -122,21 +105,6 @@ func (td TemplateData) JoinConfigurationYAML() (string, error) {
 	}
 
 	cb, err := yaml.Marshal(cfg)
-	if td.IsVersionLessThan1_13() {
-		apiAddress := strings.Split(td.APIServerAddress, ":")
-		if len(apiAddress) < 2 {
-			return "", errors.Errorf("Apiserver address is not correct")
-		}
-		apiPort, err := strconv.Atoi(apiAddress[1])
-		if err != nil {
-			return "", err
-		}
-		conf := ConvertJoinConfigFromV1beta1ToV1alpha3(&cfg)
-		conf.ClusterName = td.ClusterName
-		conf.APIEndpoint.AdvertiseAddress = apiAddress[0]
-		conf.APIEndpoint.BindPort = int32(apiPort)
-		cb, err = yaml.Marshal(conf)
-	}
 	return string(cb), err
 }
 
@@ -152,44 +120,6 @@ func (td TemplateData) IsVersionLessThan(currentVersion string) bool {
 	cv, _ := version.NewVersion(td.KubernetesVersion)
 	v11, _ := version.NewVersion(currentVersion)
 	return cv.LessThan(v11)
-}
-
-func (td TemplateData) IsVersionLessThan1_13() bool {
-	return td.IsVersionLessThan("1.13.0")
-}
-
-func (td TemplateData) IsKubeadmV1Alpha3() bool {
-	return !td.IsVersionLessThan("1.12.0")
-}
-
-func (td TemplateData) IsVersionLessThan1_11() bool {
-	return td.IsVersionLessThan("1.11.0")
-}
-
-func (td TemplateData) UseKubeProxy1_11_0() bool {
-	v, _ := version.NewVersion(td.KubernetesVersion)
-	if v.ToMutator().Version.String() == "1.11.0" {
-		return true
-	}
-	return false
-}
-
-// Forked kubeadm 1.8.x for: https://github.com/kubernetes/kubernetes/pull/49840
-func (td TemplateData) UseForkedKubeadm_1_8_3() bool {
-	v, _ := version.NewVersion(td.KubernetesVersion)
-	return v.ToMutator().ResetPrerelease().ResetMetadata().ResetPatch().String() == "1.8.0"
-}
-
-func (td TemplateData) KubeletExtraArgsStr() string {
-	var buf bytes.Buffer
-	for k, v := range td.KubeletExtraArgs {
-		buf.WriteString("--")
-		buf.WriteString(k)
-		buf.WriteRune('=')
-		buf.WriteString(v)
-		buf.WriteRune(' ')
-	}
-	return buf.String()
 }
 
 func (td TemplateData) PackageList() (string, error) {
@@ -282,11 +212,6 @@ echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' > /etc/apt/sources.l
 exec_until_success 'add-apt-repository -y ppa:gluster/glusterfs-3.10'
 apt-get update -y
 exec_until_success 'apt-get install -y {{ .PackageList }}'
-{{ if .UseForkedKubeadm_1_8_3 }}
-curl -fsSL --retry 5 -o kubeadm	https://github.com/appscode/kubernetes/releases/download/v1.8.3/kubeadm \
-	&& chmod +x kubeadm \
-	&& mv kubeadm /usr/bin/
-{{ end }}
 
 curl -fsSL --retry 5 -o pre-k https://cdn.appscode.com/binaries/pre-k/{{ .PrekVersion }}/pre-k-linux-amd64 \
 	&& chmod +x pre-k \
@@ -328,11 +253,6 @@ cat /etc/kubernetes/kubeadm/join.yaml
 
 kubeadm join --config=/etc/kubernetes/kubeadm/join.yaml
 
-{{ end }}
-
-{{ if .UseKubeProxy1_11_0 }}
-kubectl apply -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/kube-proxy/v1.11.0/kube-proxy.yaml \
-  --kubeconfig /etc/kubernetes/admin.conf
 {{ end }}
 
 {{ if eq .NetworkProvider "flannel" }}
@@ -383,11 +303,7 @@ echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' > /etc/apt/sources.l
 exec_until_success 'add-apt-repository -y ppa:gluster/glusterfs-3.10'
 apt-get update -y
 exec_until_success 'apt-get install -y {{ .PackageList }}'
-{{ if .UseForkedKubeadm_1_8_3 }}
-curl -fsSL --retry 5 -o kubeadm	https://github.com/appscode/kubernetes/releases/download/v1.8.3/kubeadm \
-	&& chmod +x kubeadm \
-	&& mv kubeadm /usr/bin/
-{{ end }}
+
 curl -fsSL --retry 5 -o pre-k https://cdn.appscode.com/binaries/pre-k/{{ .PrekVersion }}/pre-k-linux-amd64 \
 	&& chmod +x pre-k \
 	&& mv pre-k /usr/bin/
@@ -528,11 +444,6 @@ pre-k merge config \
 
 `))
 	_ = template.Must(StartupScriptTemplate.New("calico").Parse(`
-{{ if .IsVersionLessThan1_11 }}
-kubectl apply \
-  -f https://raw.githubusercontent.com/pharmer/addons/release-1.13.1/calico/2.6/calico.yaml \
-  --kubeconfig /etc/kubernetes/admin.conf
-{{ else }}
 kubectl apply \
   -f https://docs.projectcalico.org/v3.3/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml \
   --kubeconfig /etc/kubernetes/admin.conf
@@ -540,7 +451,6 @@ kubectl apply \
 kubectl apply \
   -f https://docs.projectcalico.org/v3.3/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml \
   --kubeconfig /etc/kubernetes/admin.conf
-{{ end }}
 `))
 
 	_ = template.Must(StartupScriptTemplate.New("weavenet").Parse(`
