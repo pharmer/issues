@@ -89,7 +89,7 @@ require (
 	k8s.io/component-base v0.0.0-20190515024022-2354f2393ad4 // indirect
 	k8s.io/kubernetes v1.14.1
 	kmodules.xyz/client-go v0.0.0-20190515205239-a16030cc2e50
-	sigs.k8s.io/cluster-api v0.0.0-20190315202658-26aa37ad8bcf
+	sigs.k8s.io/cluster-api v0.0.0-20190508175234-0f911c1f65a5
 	sigs.k8s.io/controller-runtime v0.2.0-alpha.1
 )
 

@@ -666,8 +666,8 @@ k8s.io/utils v0.0.0-20190221042446-c2654d5206da h1:ElyM7RPonbKnQqOcw7dG2IK5uvQQn
 k8s.io/utils v0.0.0-20190221042446-c2654d5206da/go.mod h1:8k8uAuAQ0rXslZKaEWd0c3oVhZz7sSzSiPnVZayjIX0=
 kmodules.xyz/client-go v0.0.0-20190515205239-a16030cc2e50 h1:KDyD+h3yiCxRGuY670mF10Ai9QHKXqcJkGolF9AvAJE=
 kmodules.xyz/client-go v0.0.0-20190515205239-a16030cc2e50/go.mod h1:R1t4K2wWb6PTkhQPEjqQIWz+gRS0/Z0mMfIy/TsdB/w=
-sigs.k8s.io/cluster-api v0.0.0-20190315202658-26aa37ad8bcf h1:fmd7Hu7Fy1NufBQQDe0wJrzCMEGRld8HDPCXLWNc89s=
-sigs.k8s.io/cluster-api v0.0.0-20190315202658-26aa37ad8bcf/go.mod h1:aEXstFx3krpj6/AOcV/rOP2VLKdrtSNUMDR2Kmt6YSs=
+sigs.k8s.io/cluster-api v0.0.0-20190508175234-0f911c1f65a5 h1:T+GZddBm+PVD+Xcjl0Q/5/cRFbUF3HbquuGwDILYBv8=
+sigs.k8s.io/cluster-api v0.0.0-20190508175234-0f911c1f65a5/go.mod h1:aEXstFx3krpj6/AOcV/rOP2VLKdrtSNUMDR2Kmt6YSs=
 sigs.k8s.io/controller-runtime v0.2.0-alpha.1 h1:JptNtMgYhE/eRAtHSkHiCJPntPpuVHHq2vAQQD/S3Oo=
 sigs.k8s.io/controller-runtime v0.2.0-alpha.1/go.mod h1:TSH2R0nSz4WAlUUlNnOFcOR/VUhfwBLlmtq2X6AiQCA=
 sigs.k8s.io/kustomize v2.0.3+incompatible h1:JUufWFNlI44MdtnjUqVnvh29rR37PQFzPbLXqhyOyX0=
