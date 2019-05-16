@@ -109,4 +109,5 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30
 	k8s.io/metrics => k8s.io/metrics v0.0.0-20190314001731-1bd6a4002213
 	k8s.io/utils => k8s.io/utils v0.0.0-20190221042446-c2654d5206da
+	sigs.k8s.io/cluster-api => github.com/pharmer/cluster-api v0.0.0-20190516113055-efd9b156f6d2
 )

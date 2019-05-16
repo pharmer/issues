@@ -833,7 +833,7 @@ kmodules.xyz/client-go/tools/backup
 kmodules.xyz/client-go/core/v1
 kmodules.xyz/client-go
 kmodules.xyz/client-go/meta
-# sigs.k8s.io/cluster-api v0.0.0-20190508175234-0f911c1f65a5
+# sigs.k8s.io/cluster-api v0.0.0-20190508175234-0f911c1f65a5 => github.com/pharmer/cluster-api v0.0.0-20190516113055-efd9b156f6d2
 sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1
 sigs.k8s.io/cluster-api/cmd/clusterctl/clusterdeployer/clusterclient
 sigs.k8s.io/cluster-api/cmd/clusterctl/phases
@@ -860,7 +860,6 @@ sigs.k8s.io/controller-runtime/pkg/manager
 sigs.k8s.io/controller-runtime/pkg/client/config
 sigs.k8s.io/controller-runtime/pkg/runtime/signals
 sigs.k8s.io/controller-runtime/pkg/scheme
-sigs.k8s.io/controller-runtime/pkg/runtime/scheme
 sigs.k8s.io/controller-runtime/pkg/client/apiutil
 sigs.k8s.io/controller-runtime/pkg/cache
 sigs.k8s.io/controller-runtime/pkg/internal/log
